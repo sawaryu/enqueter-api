@@ -1,0 +1,10 @@
+.idea
+sample-api.iml
+mysql
+__pycache__
+**/__pycache__
+test/test.py
+test
+.env
+.venv
+.DS_Store

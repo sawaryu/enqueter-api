@@ -1,0 +1,12 @@
+__pycache__
+/.circleci
+Dockerfile
+docker-compose.yml
+/.idea
+/.venv
+/.git
+/.env
+test
+/mysql
+.gitignore
+README.MD
