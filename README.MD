@@ -1,6 +1,5 @@
-# Python API　プロジェクト
-FlaskAPIを使用したサンプルプロジェクト
-TODOリストを作成して基本的なAPI開発を学ぶ。
+# Enqueter API
+fork from ichimonittou api 。
 
 ### API設計方針
 **1. 基準となるリソースを意識してエンドポイントを設計する。**

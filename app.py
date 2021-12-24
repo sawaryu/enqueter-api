@@ -56,7 +56,7 @@ authorizations = {
 
 api = Api(
     app,
-    title='SAMPLE API',
+    title='Enqueter API',
     version='1.0',
     license="SAMPLE license",
     description='the sample API for the front application.',
