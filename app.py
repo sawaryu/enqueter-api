@@ -10,12 +10,8 @@ from api.auth.admin import admin_ns
 from api.auth.auth import auth_ns
 from api.model.models import db, User, TokenBlocklist
 import config
-from api.notifications import notification_ns
-from api.posts import post_ns
-from api.reports import report_ns
-from api.tags import tag_ns
+from api.questions import question_ns
 from api.upload import upload_ns
-from api.subjects import subject_ns
 from api.users import user_ns
 
 app = Flask(__name__)
@@ -66,11 +62,7 @@ api = Api(
 api.add_namespace(auth_ns, path='/auth')
 api.add_namespace(admin_ns, path='/admin')
 api.add_namespace(user_ns, path='/users')
-api.add_namespace(subject_ns, path='/subjects')
-api.add_namespace(post_ns, path='/posts')
-api.add_namespace(notification_ns, path='/notifications')
-api.add_namespace(tag_ns, path='/tags')
-api.add_namespace(report_ns, path='/reports')
+api.add_namespace(question_ns, path='/questions')
 api.add_namespace(upload_ns, path='/upload')
 
 
