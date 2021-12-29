@@ -23,8 +23,8 @@ signup = auth_ns.model('AuthSignup', {
 })
 
 login = auth_ns.model('AuthLogin', {
-    'public_id': fields.String(pattern=public_id_regex, required=True),
-    'password': fields.String(pattern=password_regex, required=True),
+    'public_id': fields.String(required=True),
+    'password': fields.String(required=True),
 })
 
 update = auth_ns.model('AuthUpdate', {
@@ -80,7 +80,7 @@ class AuthLoginApi(Resource):
             refresh_token = create_refresh_token(identity=user)
             return jsonify(access_token=access_token, refresh_token=refresh_token)
 
-        return {"status": 401, "message": "ユーザーIDとパスワードの組み合わせが正しくありません。"}, http.HTTPStatus.UNAUTHORIZED
+        return {"status": 401, "message": "Incorrect user id or password."}, http.HTTPStatus.UNAUTHORIZED
 
 
 @auth_ns.route('/logout')
@@ -114,7 +114,6 @@ class AuthDestroy(Resource):
                 Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
             )
         db.session.delete(current_user)
-
         db.session.commit()
 
         return {

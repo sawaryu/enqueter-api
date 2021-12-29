@@ -42,7 +42,7 @@ class User(db.Model):
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
-    subjects = db.relationship('Subject', order_by="desc(Subject.created_at)", backref='user', lazy=True,
+    questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
                                cascade='all, delete-orphan')
     follower = db.relationship(
         'User', secondary='relationship',
