@@ -14,7 +14,8 @@ def main():
         db.create_all()
 
         """faker インスタンス作成"""
-        faker_gen = Faker('ja_JP')
+        # faker_gen = Faker('ja_JP')
+        faker_gen = Faker()  # english
 
         """User"""
         # create 1~10 users.

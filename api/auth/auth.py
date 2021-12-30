@@ -159,7 +159,7 @@ class AuthPassword(Resource):
         if not check_password_hash(current_user.password, params['current_password']):
             return {
                 "status": 401,
-                "message": "現在のパスワードが正しくありません。"
+                "message": "Incorrect current password"
             }, http.HTTPStatus.UNAUTHORIZED
 
         current_user.password = generate_password_hash(params['new_password'], method='sha256')
