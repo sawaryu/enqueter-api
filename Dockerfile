@@ -5,16 +5,16 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# timezone
+# Timezone
 ENV TZ="Asia/Tokyo"
 
-# filename of executing application
+# The filename executing application
 ENV FLASK_APP=app
 
-# important description
+# Important description
 COPY . /app
 
-# importtant variables from AWS SSM
+# Importtant variables getting from AWS SSM
 ENV FLASK_CONFIGURATION="production"
 
 ARG SECRET_KEY
@@ -31,5 +31,5 @@ ENV AWS_PATH_KEY="avatar/"
 ARG SQLALCHEMY_DATABASE_URI
 ENV SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
 
-# If execute db migration, override the entry-CMD in the container definiton.
+# When executeing db migration, override the entry-CMD in the container definiton.
 CMD ["uwsgi", "--ini", "app.ini"]

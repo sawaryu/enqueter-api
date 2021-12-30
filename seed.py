@@ -1,6 +1,6 @@
 from faker import Faker
 from werkzeug.security import generate_password_hash
-from api.model.models import User, db, UserRole
+from api.model.models import User, db, UserRole, Question
 from random import randrange
 from app import app
 
@@ -48,6 +48,17 @@ def main():
             first_user.follow(target_user)
             target_user.follow(first_user)
             db.session.commit()
+
+        """Question"""
+        for n in range(1, 7):
+            for n_2 in range(1, 5):
+                content = faker_gen.address() + "？"
+                question = Question(
+                    content=content,
+                    user_id=n
+                )
+                db.session.add(question)
+        db.session.commit()
 
 
 if __name__ == '__main__':

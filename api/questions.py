@@ -4,7 +4,7 @@ from flask import request
 from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
 
-from api.model.models import Question, db
+from api.model.models import Question, db, User
 
 question_ns = Namespace('/questions')
 
@@ -21,8 +21,10 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def get(self):
-        questions = Question.query.all()
-        return list(map(lambda x: x.to_dict(), questions))
+        objects = db.session.query(Question, User).join(User).all()
+        return list(map(lambda x: x.Question.to_dict() | {
+            "user": x.User.to_dict()
+        }, objects))
 
     @question_ns.doc(
         security='jwt_auth',
@@ -34,20 +36,57 @@ class QuestionIndex(Resource):
         if current_user.questions and (current_user.questions[0].created_at + timedelta(minutes=3)) > datetime.now():
             return {
                        "status": 400,
-                       "message": "Not yet passed 3 minutes from latest question you created"
+                       "message": "Not yet passed 3 minutes from latest question you created."
                    }, 400
 
         content = request.json['content']
 
         question = Question(
             user_id=current_user.id,
-            contetn=content
+            content=content
         )
 
         db.session.add(question)
         db.session.commit()
+        db.session.refresh(question)
 
-        return {"status": 201, "message": "the question created."}, 201
+        return {"status": 201, "message": "the question created.", "data": question.to_dict()}, 201
 
 
+@question_ns.route('/<int:question_id>')
+class QuestionShow(Resource):
+    @question_ns.doc(
+        security='jwt_auth',
+        description='Get a questions by id.'
+    )
+    @jwt_required()
+    def get(self, question_id):
+        question = Question.query.filter_by(id=question_id).first()
+        if not question:
+            return {"status": 404, "message": "Not Found"}, 404
 
+        return question.to_dict() | {
+            "user": question.user.to_dict()
+        }
+
+
+@question_ns.route('/timeline')
+class QuestionTimeline(Resource):
+    @question_ns.doc(
+        security='jwt_auth',
+        description='Get a questions of timeline (related with following users.)'
+    )
+    @jwt_required()
+    def get(self):
+        following_ids = [current_user.id]
+        for user in current_user.followings:
+            following_ids.append(user.id)
+
+        objects = db.session.query(Question, User) \
+            .filter(Question.user_id.in_(following_ids)) \
+            .join(User) \
+            .all()
+
+        return list(map(lambda x: x.Question.to_dict() | {
+            "user": x.User.to_dict()
+        }, objects))

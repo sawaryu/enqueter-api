@@ -183,7 +183,7 @@ class RefreshApi(Resource):
         return jsonify(access_token=access_token)
 
 
-# confirm we can get the current_user info
+# confirm you can get the current_user info
 @auth_ns.route('/protected')
 class ProtectedApi(Resource):
     @auth_ns.doc(

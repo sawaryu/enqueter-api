@@ -52,8 +52,11 @@ class UserQuestions(Resource):
     )
     @jwt_required()
     def get(self, user_id):
-        questions = Question.query.filter_by(user_id=user_id).all()
-        return list(map(lambda x: x.to_dict(), questions))
+        objects = db.session.query(Question, User).filter(Question.user_id == user_id) \
+            .join(User).all()
+        return list(map(lambda x: x.Question.to_dict() | {
+            "user": x.User.to_dict()
+        }, objects))
 
 
 # Follow
