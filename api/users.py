@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, current_user
 from flask_restx import Resource, Namespace, fields
 from sqlalchemy import func
 
-from api.model.models import User, db, relationship, SearchHistory
+from api.model.models import User, db, relationship, SearchHistory, Question
 
 user_ns = Namespace('/users')
 
@@ -19,6 +19,7 @@ userSearchHistory = user_ns.model('UserSearchHistory', {
 })
 
 
+# Basic
 @user_ns.route('/<user_id>')
 class UserShow(Resource):
     @user_ns.doc(
@@ -42,6 +43,20 @@ class UserShow(Resource):
         return user_dict
 
 
+# Question
+@user_ns.route('/<user_id>/questions')
+class UserQuestions(Resource):
+    @user_ns.doc(
+        security='jwt_auth',
+        description='Get questions by user_id'
+    )
+    @jwt_required()
+    def get(self, user_id):
+        questions = Question.query.filter_by(user_id=user_id).all()
+        return list(map(lambda x: x.to_dict(), questions))
+
+
+# Follow
 @user_ns.route('/<int:user_id>/followings')
 class UserFollowings(Resource):
     @user_ns.doc(
@@ -125,6 +140,7 @@ class Relationship(Resource):
         return {"status": 200, "message": f"done successfully unfollow user:{followed_id}"}
 
 
+# Search
 # todo(余裕があれば検索条件の強化)
 @user_ns.route('/search')
 class UsersSearch(Resource):

@@ -2,6 +2,7 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
+from datetime import timedelta
 
 from api.model.enums import UserRole
 
@@ -99,13 +100,21 @@ class Question(db.Model):
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
+    # if the question has been created at more than before a week, it is treated as closed question.
+    def is_open(self):
+        if (datetime.now() - self.created_at) > timedelta(days=7):
+            return False
+        else:
+            return True
+
     def to_dict(self):
         return {
             "id": self.id,
             "user_id": self.user_id,
             "content": self.content,
             "created_at": str(self.created_at),
-            "updated_at": str(self.updated_at)
+            "updated_at": str(self.updated_at),
+            "is_open": self.is_open()
         }
 
 

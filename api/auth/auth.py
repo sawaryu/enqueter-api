@@ -13,7 +13,7 @@ from api.upload import client
 
 auth_ns = Namespace('/auth')
 
-public_id_regex = r'^[0-9a-zA-Z]*$'
+public_id_regex = r'\A[a-z\d]{1,15}\Z(?i)'
 password_regex = r'\A[a-z\d]{8,72}\Z(?i)'
 
 signup = auth_ns.model('AuthSignup', {
@@ -39,10 +39,10 @@ updatePassword = auth_ns.model('AuthUpdatePassword', {
 })
 
 
-@auth_ns.route('/signup')
-class AuthRegister(Resource):
+@auth_ns.route('')
+class AuthBasic(Resource):
     @auth_ns.doc(
-        description='signup.',
+        description='Create new user.',
         body=signup
     )
     def post(self):
@@ -64,11 +64,58 @@ class AuthRegister(Resource):
 
         return {"status": 201, 'message': 'registered successfully'}, 201
 
+    @auth_ns.doc(
+        security='jwt_auth',
+        description='Delete User, avatar from S3.'
+    )
+    @jwt_required()
+    def delete(self):
+        # user and avatar delete
+        if "egg" not in current_user.avatar:
+            client.delete_object(
+                Bucket=os.getenv("AWS_BUCKET_NAME"),
+                Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
+            )
+        db.session.delete(current_user)
+        db.session.commit()
+
+        return {
+            'status': 200,
+            'message': 'the user was successfully deleted. And token revoked'
+        }
+
+    @auth_ns.doc(
+        security='jwt_auth',
+        description="Update user's profile.",
+        body=update
+    )
+    @jwt_required()
+    def put(self):
+        params = request.json
+
+        if not current_user.public_id == params['public_id'] \
+                and User.query.filter_by(public_id=params['public_id']).one_or_none():
+            return {
+                       'status': 400,
+                       'message': 'the user id has been already used.'
+                   }, 400
+
+        current_user.public_id = params['public_id']
+        current_user.name = params['name']
+        current_user.name_replaced = params['name'].replace(' ', '').replace('　', '')
+        current_user.introduce = params['introduce']
+        db.session.commit()
+
+        return {
+            'status': 201,
+            'message': 'the user was successfully updated.'
+        }, 201
+
 
 @auth_ns.route('/login')
-class AuthLoginApi(Resource):
+class AuthLogin(Resource):
     @auth_ns.doc(
-        description='login.',
+        description='Login',
         body=login
     )
     def post(self):
@@ -96,57 +143,6 @@ class AuthLogout(Resource):
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
         db.session.commit()
         return jsonify(msg="JWT revoked")
-
-
-@auth_ns.route('')
-class AuthDestroy(Resource):
-
-    @auth_ns.doc(
-        security='jwt_auth',
-        description='delete User, avatar from S3.'
-    )
-    @jwt_required()
-    def delete(self):
-        # user and avatar delete
-        if "egg" not in current_user.avatar:
-            client.delete_object(
-                Bucket=os.getenv("AWS_BUCKET_NAME"),
-                Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
-            )
-        db.session.delete(current_user)
-        db.session.commit()
-
-        return {
-            'status': 200,
-            'message': 'the user was successfully deleted. And token revoked'
-        }
-
-    @auth_ns.doc(
-        security='jwt_auth',
-        description='required access-token to update the user.',
-        body=update
-    )
-    @jwt_required()
-    def put(self):
-        params = request.json
-
-        if not current_user.public_id == params['public_id'] \
-           and User.query.filter_by(public_id=params['public_id']).one_or_none():
-            return {
-                'status': 400,
-                'message': '既に使用されているユーザーIDです。'
-            }, 400
-
-        current_user.public_id = params['public_id']
-        current_user.name = params['name']
-        current_user.name_replaced = params['name'].replace(' ', '').replace('　', '')
-        current_user.introduce = params['introduce']
-        db.session.commit()
-
-        return {
-            'status': 200,
-            'message': 'the user was successfully updated.'
-        }
 
 
 @auth_ns.route('/password')
