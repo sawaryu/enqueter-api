@@ -1,4 +1,6 @@
 from datetime import datetime
+
+from flask_jwt_extended import current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
@@ -20,8 +22,16 @@ answer = db.Table('answer',
                   db.Column('question_id', Integer, ForeignKey('question.id', ondelete="CASCADE"), nullable=False),
                   db.Column('is_yes', Boolean, nullable=False),
                   db.Column('is_collect', Boolean, nullable=False),
+                  db.Column('created_at', DateTime, nullable=False, default=datetime.now()),
                   UniqueConstraint('user_id', 'question_id', name='answer_unique_key')
                   )
+
+bookmark = db.Table('bookmark',
+                    db.Column('user_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
+                    db.Column('question_id', Integer, ForeignKey('question.id', ondelete="CASCADE"), nullable=False),
+                    db.Column('created_at', DateTime, nullable=False, default=datetime.now()),
+                    UniqueConstraint('user_id', 'question_id', name='bookmark_unique_key')
+                    )
 
 
 class TokenBlocklist(db.Model):
@@ -44,23 +54,43 @@ class User(db.Model):
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
     questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
-                               cascade='all, delete-orphan')
+                                cascade='all, delete-orphan')
+
+    answers = db.relationship(
+        'Question',
+        order_by="desc(answer.c.created_at)",
+        secondary=answer,
+        backref="answered_users",
+        lazy="dynamic"
+    )
+
+    bookmarks = db.relationship(
+        'Question',
+        order_by="desc(bookmark.c.created_at)",
+        secondary=bookmark,
+        backref="bookmarked_users",
+        lazy="dynamic"
+    )
+
     follower = db.relationship(
         'User', secondary='relationship',
         primaryjoin=(relationship.c.followed_id == id),
         secondaryjoin=(relationship.c.following_id == id),
         back_populates='followings')
+
     followings = db.relationship(
         'User', secondary='relationship',
         primaryjoin=(relationship.c.following_id == id),
         secondaryjoin=(relationship.c.followed_id == id),
         back_populates='follower')
+
     histories = db.relationship(
         'SearchHistory',
         primaryjoin='SearchHistory.user_id==User.id',
         order_by="desc(SearchHistory.created_at)", lazy=True, cascade='all, delete-orphan',
         back_populates='from_user'
     )
+
     histories_passive = db.relationship(
         'SearchHistory',
         primaryjoin='SearchHistory.target_id==User.id',
@@ -78,6 +108,7 @@ class User(db.Model):
             "point": self.point,
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
+            "is_following": True if current_user.is_following(self) else False,
             "role": self.role
         }
 
@@ -91,6 +122,24 @@ class User(db.Model):
 
     def is_following(self, user):
         return list(filter(lambda x: x.id == user.id, self.followings))
+
+    def answer_question(self, question):
+        if not self.is_answered_question(question):
+            self.answers.append(question)
+
+    def is_answered_question(self, question):
+        return list(filter(lambda x: x.id == question.id, self.answers))
+
+    def bookmark_question(self, question):
+        if not self.is_bookmark_question(question):
+            self.bookmarks.append(question)
+
+    def un_bookmark_question(self, question):
+        if self.is_bookmark_question(question):
+            self.bookmarks.remove(question)
+
+    def is_bookmark_question(self, question):
+        return list(filter(lambda x: x.id == question.id, self.bookmarks))
 
 
 class Question(db.Model):
@@ -107,6 +156,13 @@ class Question(db.Model):
         else:
             return True
 
+    # whether bookmarked by current user
+    def is_bookmarked(self):
+        if current_user.is_bookmark_question(self):
+            return True
+        else:
+            return False
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -114,7 +170,8 @@ class Question(db.Model):
             "content": self.content,
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
-            "is_open": self.is_open()
+            "is_open": self.is_open(),
+            "is_bookmarked": self.is_bookmarked()
         }
 
 

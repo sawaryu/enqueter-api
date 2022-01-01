@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, current_user
 from flask_restx import Resource, Namespace, fields
 from sqlalchemy import func
 
-from api.model.models import User, db, relationship, SearchHistory, Question
+from api.model.models import User, db, relationship, SearchHistory, Question, bookmark
 
 user_ns = Namespace('/users')
 
@@ -32,18 +32,16 @@ class UserShow(Resource):
         if not user:
             return {'status': 404, 'message': 'the page you want was not found.'}, 404
 
-        is_following = True if current_user.is_following(user) else False
-
         user_dict = user.to_dict() | {
-            "followings_count": len(user.followings),
+            "following_count": len(user.followings),
             "follower_count": len(user.follower),
-            "is_following": is_following
+            "questions_count": len(user.questions),
         }
 
         return user_dict
 
 
-# Question
+# Question TODO bookmark
 @user_ns.route('/<user_id>/questions')
 class UserQuestions(Resource):
     @user_ns.doc(
@@ -54,6 +52,26 @@ class UserQuestions(Resource):
     def get(self, user_id):
         objects = db.session.query(Question, User).filter(Question.user_id == user_id) \
             .join(User).all()
+        return list(map(lambda x: x.Question.to_dict() | {
+            "user": x.User.to_dict()
+        }, objects))
+
+
+@user_ns.route('/<user_id>/questions/bookmark')
+class UserQuestionsBookmark(Resource):
+    @user_ns.doc(
+        security='jwt_auth',
+        description='Get questions bookmarked.'
+    )
+    @jwt_required()
+    def get(self, user_id):
+        objects = db.session.query(Question, User) \
+            .join(bookmark, bookmark.c.question_id == Question.id) \
+            .filter(bookmark.c.user_id == user_id) \
+            .join(User, User.id == Question.user_id) \
+            .order_by(bookmark.c.created_at.desc()) \
+            .all()
+
         return list(map(lambda x: x.Question.to_dict() | {
             "user": x.User.to_dict()
         }, objects))
@@ -108,15 +126,16 @@ class UserFollowers(Resource):
         return users_dicts
 
 
-@user_ns.route('/<int:followed_id>/relationships')
+@user_ns.route('/relationships')
 class Relationship(Resource):
     # follow
     @user_ns.doc(
         security='jwt_auth',
-        description='現在ユーザーが対象ユーザーをフォローします。（followed_id）'
+        description='Follow the user.'
     )
     @jwt_required()
-    def post(self, followed_id):
+    def post(self):
+        followed_id = request.json["target_id"]
         if current_user.id == followed_id:
             return {"status": 400, "message": "bad request."}, http.HTTPStatus.BAD_REQUEST
 
@@ -131,10 +150,11 @@ class Relationship(Resource):
     # unfollow
     @user_ns.doc(
         security='jwt_auth',
-        description='現在ユーザーが対象ユーザーをアンフォローします。(followed_id)'
+        description='Unfollow the user.'
     )
     @jwt_required()
-    def delete(self, followed_id):
+    def delete(self):
+        followed_id = request.json["target_id"]
         target_user = User.query.filter_by(id=followed_id).first()
         if not target_user:
             return {"status": 409, "message": "The user may has been deleted."}, 409
@@ -176,9 +196,9 @@ class UsersSearchHistory(Resource):
     @jwt_required()
     def get(self):
         users_objects = db.session.query(SearchHistory, User) \
-                .filter(SearchHistory.user_id == current_user.id) \
-                .join(User, User.id == SearchHistory.target_id)\
-                .order_by(SearchHistory.updated_at.desc()).all()
+            .filter(SearchHistory.user_id == current_user.id) \
+            .join(User, User.id == SearchHistory.target_id) \
+            .order_by(SearchHistory.updated_at.desc()).all()
         return list(map(lambda x: x.User.to_dict(), users_objects))
 
     @user_ns.doc(
@@ -232,7 +252,7 @@ class UsersSearchHistoryShow(Resource):
     )
     @jwt_required()
     def delete(self, target_id):
-        history = SearchHistory.query.filter_by(user_id=current_user.id)\
+        history = SearchHistory.query.filter_by(user_id=current_user.id) \
             .filter_by(target_id=target_id).first()
         db.session.delete(history)
         db.session.commit()
@@ -241,4 +261,3 @@ class UsersSearchHistoryShow(Resource):
             "status": 200,
             "message": "The search history was deleted."
         }
-

@@ -12,6 +12,10 @@ questionCreate = question_ns.model('QuestionCreate', {
     'content': fields.String(required=True, max_length=255, pattern=r'\S'),
 })
 
+bookmarkCreateOrDelete = question_ns.model('BookmarkCreate', {
+    'question_id': fields.Integer(required=True)
+})
+
 
 @question_ns.route('')
 class QuestionIndex(Resource):
@@ -90,3 +94,54 @@ class QuestionTimeline(Resource):
         return list(map(lambda x: x.Question.to_dict() | {
             "user": x.User.to_dict()
         }, objects))
+
+
+@question_ns.route('/bookmark')
+class QuestionBookmark(Resource):
+    @question_ns.doc(
+        security='jwt_auth',
+        description='Get bookmarked questions. (current_user)'
+    )
+    @jwt_required()
+    def get(self):
+        objects = current_user.bookmarks.join(User).all()
+
+        return list(map(lambda x: x.Question.to_dict() | {
+            "user": x.User.to_dict()
+        }, objects))
+
+    @question_ns.doc(
+        security='jwt_auth',
+        description='Create the bookmark of question.',
+        body=bookmarkCreateOrDelete
+    )
+    @jwt_required()
+    def post(self):
+        question_id = request.json["question_id"]
+
+        question = Question.query.filter_by(id=question_id).first()
+        if not question:
+            return {"status": 400, "message": "bad request"}, 400
+
+        current_user.bookmark_question(question)
+        db.session.commit()
+
+        return {"status": 201, "message": "successfully bookmarked the question."}
+
+    @question_ns.doc(
+        security='jwt_auth',
+        description='Delete the bookmark of question.',
+        body=bookmarkCreateOrDelete
+    )
+    @jwt_required()
+    def delete(self):
+        question_id = request.json["question_id"]
+
+        question = Question.query.filter_by(id=question_id).first()
+        if not question:
+            return {"status": 400, "message": "bad request"}, 400
+
+        current_user.un_bookmark_question(question)
+        db.session.commit()
+
+        return {"status": 200, "message": "successfully un bookmarked the question."}
