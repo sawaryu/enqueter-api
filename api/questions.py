@@ -25,7 +25,11 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def get(self):
-        objects = db.session.query(Question, User).join(User).all()
+        objects = db.session.query(Question, User)\
+            .join(User)\
+            .order_by(Question.created_at.desc())\
+            .all()
+
         return list(map(lambda x: x.Question.to_dict() | {
             "user": x.User.to_dict()
         }, objects))
