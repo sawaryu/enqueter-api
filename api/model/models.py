@@ -195,15 +195,13 @@ class Question(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     content = Column(String(255), nullable=False)
+    closed_at = Column(DateTime, nullable=False, default=(datetime.now() + timedelta(weeks=1)))
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
     # if the question has been created at before more than a week, it is treated as 'closed' question.
     def is_open(self):
-        if (datetime.now() - self.created_at) > timedelta(days=7):
-            return False
-        else:
-            return True
+        return datetime.now() < self.closed_at
 
     # whether current_user  bookmarked the question.
     def is_bookmarked(self):
@@ -224,6 +222,7 @@ class Question(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "content": self.content,
+            "closed_at": self.closed_at,
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
             "is_open": self.is_open(),
