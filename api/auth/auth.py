@@ -70,13 +70,22 @@ class AuthBasic(Resource):
     )
     @jwt_required()
     def delete(self):
-        # user and avatar delete
+
+        # delete the avatar from aws s3
         if "egg" not in current_user.avatar:
             client.delete_object(
                 Bucket=os.getenv("AWS_BUCKET_NAME"),
                 Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
             )
+
+        # delete the current_user
         db.session.delete(current_user)
+
+        # current_user's jwt go to block lists.
+        jti = get_jwt()["jti"]
+        now = datetime.now(timezone.utc)
+        db.session.add(TokenBlocklist(jti=jti, created_at=now))
+
         db.session.commit()
 
         return {

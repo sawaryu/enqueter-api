@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, current_user
 from flask_restx import Resource, Namespace, fields
 from sqlalchemy import func
 
-from api.model.models import User, db, relationship, SearchHistory, Question, bookmark
+from api.model.models import User, db, relationship, SearchHistory, Question, bookmark, answer
 
 user_ns = Namespace('/users')
 
@@ -45,7 +45,7 @@ class UserShow(Resource):
         return user_dict
 
 
-# Question TODO bookmark
+# Question TODO bookmark (another person's bookmarks can be watched ?)
 @user_ns.route('/<user_id>/questions')
 class UserQuestions(Resource):
     @user_ns.doc(
@@ -55,17 +55,38 @@ class UserQuestions(Resource):
     @jwt_required()
     def get(self, user_id):
         objects = db.session.query(Question, User).filter(Question.user_id == user_id) \
+            .order_by(Question.id.desc()) \
             .join(User).all()
         return list(map(lambda x: x.Question.to_dict() | {
             "user": x.User.to_dict()
         }, objects))
 
 
-@user_ns.route('/<user_id>/questions/bookmark')
-class UserQuestionsBookmark(Resource):
+@user_ns.route('/<user_id>/questions/answered')
+class UserQuestionsAnswered(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get questions bookmarked.'
+        description='Get answered questions by user_id'
+    )
+    @jwt_required()
+    def get(self, user_id):
+        objects = db.session.query(Question, User) \
+            .join(answer, answer.c.question_id == Question.id) \
+            .filter(answer.c.user_id == user_id) \
+            .join(User, User.id == Question.user_id) \
+            .order_by(answer.c.created_at.desc()) \
+            .all()
+
+        return list(map(lambda x: x.Question.to_dict() | {
+            "user": x.User.to_dict()
+        }, objects))
+
+
+@user_ns.route('/<user_id>/questions/bookmark')
+class UserQuestionsBookmarked(Resource):
+    @user_ns.doc(
+        security='jwt_auth',
+        description='Get bookmarked questions by user_id.'
     )
     @jwt_required()
     def get(self, user_id):
@@ -231,9 +252,9 @@ class UsersSearchHistory(Resource):
         db.session.add(new_history)
         db.session.commit()
         return {
-            "status": 201,
-            "message": "New history has been created"
-        }, 201
+                   "status": 201,
+                   "message": "New history has been created"
+               }, 201
 
     @user_ns.doc(
         security='jwt_auth',
