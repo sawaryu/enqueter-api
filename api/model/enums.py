@@ -8,3 +8,12 @@ class UserRole(str, enum.Enum):
     @classmethod
     def get_value_list(cls):
         return list(map(lambda x: x.value, cls))
+
+
+class NotificationCategory(str, enum.Enum):
+    follow = "follow"
+    answer = "answer"
+
+    @classmethod
+    def get_value_list(cls):
+        return list(map(lambda x: x.value, cls))

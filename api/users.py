@@ -15,7 +15,11 @@ userSearch = user_ns.model('UserSearch', {
 })
 
 userSearchHistory = user_ns.model('UserSearchHistory', {
-    'target_id': fields.Integer(required=True, pattern=r'[0-9]'),
+    'user_id': fields.Integer(required=True),
+})
+
+createOrDeleteRelationship = user_ns.model('CreateOrDeleteRelationship', {
+    'user_id': fields.Integer(required=True),
 })
 
 
@@ -131,45 +135,47 @@ class Relationship(Resource):
     # follow
     @user_ns.doc(
         security='jwt_auth',
-        description='Follow the user.'
+        description='Follow the user.',
+        body=createOrDeleteRelationship
     )
     @jwt_required()
     def post(self):
-        followed_id = request.json["target_id"]
-        if current_user.id == followed_id:
+        user_id = request.json["user_id"]
+        if current_user.id == user_id:
             return {"status": 400, "message": "bad request."}, http.HTTPStatus.BAD_REQUEST
 
-        target_user = User.query.filter_by(id=followed_id).first()
+        target_user = User.query.filter_by(id=user_id).first()
         if not target_user:
             return {"status": 409, "message": "The user may has been deleted."}, 409
         current_user.follow(target_user)
+        current_user.create_follow_notification(target_user)
 
         db.session.commit()
-        return {"status": 200, "message": f"done successfully follow the user:{followed_id}"}
+        return {"status": 200, "message": f"done successfully follow the user:{user_id}"}
 
     # unfollow
     @user_ns.doc(
         security='jwt_auth',
-        description='Unfollow the user.'
+        description='Unfollow the user.',
+        body=createOrDeleteRelationship
     )
     @jwt_required()
     def delete(self):
-        followed_id = request.json["target_id"]
-        target_user = User.query.filter_by(id=followed_id).first()
+        user_id = request.json["user_id"]
+        target_user = User.query.filter_by(id=user_id).first()
         if not target_user:
             return {"status": 409, "message": "The user may has been deleted."}, 409
         current_user.unfollow(target_user)
         db.session.commit()
-        return {"status": 200, "message": f"done successfully unfollow user:{followed_id}"}
+        return {"status": 200, "message": f"done successfully unfollow user:{user_id}"}
 
 
-# Search
-# todo(余裕があれば検索条件の強化)
+# Search TODO: improve search algorithm.
 @user_ns.route('/search')
 class UsersSearch(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Search User（フォロワーの多いユーザーを上位へ）',
+        description='Search User（Finally order by desc of follower count.）',
         body=userSearch
     )
     @jwt_required()
@@ -191,7 +197,7 @@ class UsersSearch(Resource):
 class UsersSearchHistory(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get the search history'
+        description='Get the search history (Finally order_by desc of updated_at)'
     )
     @jwt_required()
     def get(self):
@@ -208,26 +214,26 @@ class UsersSearchHistory(Resource):
     )
     @jwt_required()
     def post(self):
-        target_id = request.json["target_id"]
-        history = SearchHistory.query.filter_by(user_id=current_user.id).filter_by(target_id=target_id).first()
+        user_id = request.json["user_id"]
+        history = SearchHistory.query.filter_by(user_id=current_user.id).filter_by(target_id=user_id).first()
         if history:
             history.updated_at = datetime.now()
             db.session.commit()
             return {
                 "status": 200,
-                "message": "there are already the history and updated it."
+                "message": "There are already the history and updated it."
             }
 
         new_history = SearchHistory(
             user_id=current_user.id,
-            target_id=target_id,
+            target_id=user_id,
         )
         db.session.add(new_history)
         db.session.commit()
         return {
-            "status": 200,
+            "status": 201,
             "message": "New history has been created"
-        }
+        }, 201
 
     @user_ns.doc(
         security='jwt_auth',

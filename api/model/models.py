@@ -6,7 +6,7 @@ from flask_marshmallow import Marshmallow
 from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
 from datetime import timedelta
 
-from api.model.enums import UserRole
+from api.model.enums import UserRole, NotificationCategory
 
 db = SQLAlchemy()
 ma = Marshmallow()
@@ -98,6 +98,21 @@ class User(db.Model):
         back_populates='target_user'
     )
 
+    passive_notifications = db.relationship(
+        'Notification',
+        primaryjoin='Notification.passive_id==User.id',
+        order_by="desc(Notification.created_at)", lazy=True, cascade='all, delete-orphan',
+        back_populates='passive_user'
+    )
+
+    active_notifications = db.relationship(
+        'Notification',
+        primaryjoin='Notification.active_id==User.id',
+        order_by="desc(Notification.created_at)", lazy=True, cascade='all, delete-orphan',
+        back_populates='active_user'
+    )
+
+    # json
     def to_dict(self):
         return {
             "id": self.id,
@@ -112,6 +127,7 @@ class User(db.Model):
             "role": self.role
         }
 
+    # relationship
     def follow(self, user):
         if not self.is_following(user) and not self.id == user.id:
             self.followings.append(user)
@@ -123,6 +139,7 @@ class User(db.Model):
     def is_following(self, user):
         return list(filter(lambda x: x.id == user.id, self.followings))
 
+    # answer
     def answer_question(self, question):
         if not self.is_answered_question(question):
             self.answers.append(question)
@@ -130,6 +147,7 @@ class User(db.Model):
     def is_answered_question(self, question):
         return list(filter(lambda x: x.id == question.id, self.answers))
 
+    # bookmark
     def bookmark_question(self, question):
         if not self.is_bookmark_question(question):
             self.bookmarks.append(question)
@@ -141,6 +159,37 @@ class User(db.Model):
     def is_bookmark_question(self, question):
         return list(filter(lambda x: x.id == question.id, self.bookmarks))
 
+    # notification
+    def create_follow_notification(self, user):
+        if not self.is_same_notification(user.id, NotificationCategory.follow) and not self.id == user.id:
+            db.session.add(Notification(
+                passive_id=user.id,
+                active_id=self.id,
+                category=NotificationCategory.follow,
+            ))
+
+    def create_answer_notification(self, question):
+        if not self.is_same_notification(question.user_id, NotificationCategory.answer, question_id=question.id) \
+                and not self.id == question.user_id:
+            db.session.add(Notification(
+                passive_id=question.user_id,
+                active_id=self.id,
+                category=NotificationCategory.answer,
+                question_id=question.id
+            ))
+
+    def is_same_notification(self, user_id, category, question_id=None):
+        # in case of 'follow'
+        if category == NotificationCategory.follow:
+            return list(
+                filter(lambda x: x.passive_id == user_id and x.category == category, self.active_notifications))
+        # in case of 'answer'
+        elif category == NotificationCategory.answer and question_id:
+            return list(
+                filter(
+                    lambda x: x.passive_id == user_id and x.category == category and x.question_id == question_id,
+                    self.active_notifications))
+
 
 class Question(db.Model):
     id = Column(Integer, primary_key=True)
@@ -149,7 +198,7 @@ class Question(db.Model):
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
-    # if the question has been created at more than before a week, it is treated as closed question.
+    # if the question has been created at before more than a week, it is treated as 'closed' question.
     def is_open(self):
         if (datetime.now() - self.created_at) > timedelta(days=7):
             return False
@@ -175,6 +224,32 @@ class Question(db.Model):
         }
 
 
+# TODO
+class Notification(db.Model):
+    id = Column(Integer, primary_key=True)
+    passive_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"))
+    active_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"))
+    category = Column(Enum(NotificationCategory), nullable=False)
+    question_id = Column(Integer, default=None)
+    watched = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+
+    passive_user = db.relationship("User", foreign_keys=[passive_id], back_populates='passive_notifications')
+    active_user = db.relationship("User", foreign_keys=[active_id], back_populates='active_notifications')
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "category": self.category,
+            "passive_id": self.passive_id,
+            "active_id": self.active_id,
+            "question_id": self.question_id,
+            "watched": self.watched,
+            "created_at": str(self.created_at)
+        }
+
+
+# TODO
 class SearchHistory(db.Model):
     __table_args__ = (UniqueConstraint('user_id', 'target_id'), {})
     id = Column(Integer, primary_key=True)
