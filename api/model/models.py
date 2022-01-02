@@ -222,7 +222,7 @@ class Question(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "content": self.content,
-            "closed_at": self.closed_at,
+            "closed_at": str(self.closed_at),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
             "is_open": self.is_open(),

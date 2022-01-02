@@ -93,6 +93,7 @@ class QuestionTimeline(Resource):
         objects = db.session.query(Question, User) \
             .filter(Question.user_id.in_(following_ids)) \
             .join(User) \
+            .order_by(Question.id.desc()) \
             .all()
 
         return list(map(lambda x: x.Question.to_dict() | {
