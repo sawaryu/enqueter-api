@@ -205,9 +205,16 @@ class Question(db.Model):
         else:
             return True
 
-    # whether bookmarked by current user
+    # whether current_user  bookmarked the question.
     def is_bookmarked(self):
         if current_user.is_bookmark_question(self):
+            return True
+        else:
+            return False
+
+    # whether current_user answered the question.
+    def is_answered(self):
+        if current_user.is_answered_question(self):
             return True
         else:
             return False
@@ -220,11 +227,11 @@ class Question(db.Model):
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
             "is_open": self.is_open(),
+            "is_answered": self.is_answered(),
             "is_bookmarked": self.is_bookmarked()
         }
 
 
-# TODO
 class Notification(db.Model):
     id = Column(Integer, primary_key=True)
     passive_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"))
@@ -249,7 +256,6 @@ class Notification(db.Model):
         }
 
 
-# TODO
 class SearchHistory(db.Model):
     __table_args__ = (UniqueConstraint('user_id', 'target_id'), {})
     id = Column(Integer, primary_key=True)
