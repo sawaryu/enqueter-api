@@ -10,6 +10,7 @@ from api.auth.admin import admin_ns
 from api.auth.auth import auth_ns
 from api.model.models import db, User, TokenBlocklist
 import config
+from api.notifications import notification_ns
 from api.questions import question_ns
 from api.upload import upload_ns
 from api.users import user_ns
@@ -64,6 +65,7 @@ api.add_namespace(admin_ns, path='/admin')
 api.add_namespace(user_ns, path='/users')
 api.add_namespace(question_ns, path='/questions')
 api.add_namespace(upload_ns, path='/upload')
+api.add_namespace(notification_ns, path='/notifications')
 
 
 def main():
