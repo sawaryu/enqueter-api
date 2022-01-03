@@ -107,7 +107,7 @@ class UserQuestionsBookmarked(Resource):
 class UserFollowings(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='対象ユーザーがフォローしているユーザーを全て返す'
+        description='Get following user by user_id.'
     )
     @jwt_required()
     def get(self, user_id):
@@ -131,7 +131,7 @@ class UserFollowings(Resource):
 class UserFollowers(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='対象ユーザーをフォローしているユーザーを全て返す'
+        description='Get follower by user_id.'
     )
     @jwt_required()
     def get(self, user_id):
