@@ -45,7 +45,7 @@ class UserShow(Resource):
         return user_dict
 
 
-# Question TODO bookmark (another person's bookmarks can be watched ?)
+# Question
 @user_ns.route('/<user_id>/questions')
 class UserQuestions(Resource):
     @user_ns.doc(
@@ -86,10 +86,14 @@ class UserQuestionsAnswered(Resource):
 class UserQuestionsBookmarked(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get bookmarked questions by user_id.'
+        description='Get bookmarked questions by user_id. (*only access for current_user)'
     )
     @jwt_required()
     def get(self, user_id):
+        # path parameters are treated as 'string'. So it is needed to casting to 'int'.
+        if not current_user.id == int(user_id):
+            return {"status": 404, "message": "Not found."}, 404
+
         objects = db.session.query(Question, User) \
             .join(bookmark, bookmark.c.question_id == Question.id) \
             .filter(bookmark.c.user_id == user_id) \
