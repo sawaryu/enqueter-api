@@ -3,10 +3,10 @@ from datetime import datetime
 from flask_jwt_extended import current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
-from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
+from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum, func
 from datetime import timedelta
 
-from api.model.enums import UserRole, NotificationCategory
+from api.model.enums import UserRole, NotificationCategory, AnswerResult
 
 db = SQLAlchemy()
 ma = Marshmallow()
@@ -21,7 +21,7 @@ answer = db.Table('answer',
                   db.Column('user_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
                   db.Column('question_id', Integer, ForeignKey('question.id', ondelete="CASCADE"), nullable=False),
                   db.Column('is_yes', Boolean, nullable=False),
-                  db.Column('is_collect', Boolean, nullable=False),
+                  db.Column('result', Enum(AnswerResult), nullable=False),
                   db.Column('created_at', DateTime, nullable=False, default=datetime.now()),
                   UniqueConstraint('user_id', 'question_id', name='answer_unique_key')
                   )
@@ -140,9 +140,9 @@ class User(db.Model):
         return list(filter(lambda x: x.id == user.id, self.followings))
 
     # answer
-    def answer_question(self, question):
-        if not self.is_answered_question(question):
-            self.answers.append(question)
+    # def answer_question(self, question):
+    #     if not self.is_answered_question(question):
+    #         self.answers.append(question)
 
     def is_answered_question(self, question):
         return list(filter(lambda x: x.id == question.id, self.answers))
@@ -203,7 +203,7 @@ class Question(db.Model):
     def is_open(self):
         return datetime.now() < self.closed_at
 
-    # whether current_user  bookmarked the question.
+    # whether current_user bookmarked the question.
     def is_bookmarked(self):
         if current_user.is_bookmark_question(self):
             return True

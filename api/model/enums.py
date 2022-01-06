@@ -17,3 +17,14 @@ class NotificationCategory(str, enum.Enum):
     @classmethod
     def get_value_list(cls):
         return list(map(lambda x: x.value, cls))
+
+
+class AnswerResult(str, enum.Enum):
+    right = "right"
+    wrong = "wrong"
+    even = "even"
+    first = "first"
+
+    @classmethod
+    def get_value_list(cls):
+        return list(map(lambda x: x.value, cls))

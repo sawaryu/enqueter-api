@@ -4,7 +4,7 @@ from api.model.models import User, db, UserRole, Question
 from random import randrange
 from app import app
 
-
+# TODO: nameが文字数オーバする場合があるのでfakerにて文字数制限を追加する。
 def main():
     """take in flask app"""
     with app.app_context():

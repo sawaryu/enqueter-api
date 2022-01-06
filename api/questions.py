@@ -4,7 +4,8 @@ from flask import request
 from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
 
-from api.model.models import Question, db, User
+from api.model.enums import AnswerResult
+from api.model.models import Question, db, User, answer
 
 question_ns = Namespace('/questions')
 
@@ -16,6 +17,11 @@ bookmarkCreateOrDelete = question_ns.model('BookmarkCreate', {
     'question_id': fields.Integer(required=True)
 })
 
+answerCreateModel = question_ns.model('BookmarkCreate', {
+    'question_id': fields.Integer(required=True),
+    'is_yes': fields.Boolean(required=True)
+})
+
 
 @question_ns.route('')
 class QuestionIndex(Resource):
@@ -25,9 +31,9 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def get(self):
-        objects = db.session.query(Question, User)\
-            .join(User)\
-            .order_by(Question.created_at.desc())\
+        objects = db.session.query(Question, User) \
+            .join(User) \
+            .order_by(Question.created_at.desc()) \
             .all()
 
         return list(map(lambda x: x.Question.to_dict() | {
@@ -59,6 +65,65 @@ class QuestionIndex(Resource):
         db.session.refresh(question)
 
         return {"status": 201, "message": "the question created.", "data": question.to_dict()}, 201
+
+
+# TODO: duplicate key error and refactor.
+@question_ns.route('/answer')
+class QuestionsAnswer(Resource):
+    @question_ns.doc(
+        security='jwt_auth',
+        description='Create a Answer to the Question got by question_id.',
+        body=answerCreateModel
+    )
+    @jwt_required()
+    def post(self):
+        params = request.json
+        question = Question.query.filter_by(id=params["question_id"]).first()
+        if not question or question.user_id == current_user.id:
+            return {"status": 400, "message": "bad request."}, 400
+
+        result = None
+
+        if not question.answered_users:
+            result = AnswerResult.first
+
+        else:
+            yes_count = len(db.session.query(answer)
+                            .filter(answer.c.question_id == params["question_id"])
+                            .filter(answer.c.is_yes == True)
+                            .all())
+
+            no_count = len(db.session.query(answer)
+                           .filter(answer.c.question_id == params["question_id"])
+                           .filter(answer.c.is_yes == False)
+                           .all())
+            if request.json["is_yes"]:
+                yes_count += 1
+                if yes_count == no_count:
+                    result = AnswerResult.even
+                elif yes_count > no_count:
+                    result = AnswerResult.right
+                else:
+                    result = AnswerResult.wrong
+            else:
+                no_count += 1
+                if yes_count == no_count:
+                    result = AnswerResult.even
+                elif no_count > yes_count:
+                    result = AnswerResult.right
+                else:
+                    result = AnswerResult.wrong
+
+        insert_answer = answer.insert().values(
+            user_id=current_user.id,
+            question_id=question.id,
+            is_yes=params["is_yes"],
+            result=result
+        )
+        db.session.execute(insert_answer)
+        db.session.commit()
+
+        return {"message": result}
 
 
 @question_ns.route('/<int:question_id>')
