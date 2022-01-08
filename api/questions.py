@@ -3,6 +3,7 @@ from flask import request
 
 from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
+from sqlalchemy import func
 
 from api.model.enums import AnswerResult
 from api.model.models import Question, db, User, answer
@@ -129,7 +130,7 @@ class QuestionsAnswer(Resource):
         # commit
         db.session.commit()
 
-        return {"message": result}
+        return {"result": result}
 
 
 # common question info
@@ -150,7 +151,6 @@ class QuestionShow(Resource):
         }
 
 
-# only be accessed by the owner and answered users. todo
 @question_ns.route('/<int:question_id>/owner')
 class QuestionOwner(Resource):
     @question_ns.doc(
@@ -162,23 +162,46 @@ class QuestionOwner(Resource):
         question = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
+        elif question.user_id != current_user.id and not current_user.is_answered_question(question):
+            return {"status": 403, "message": "Forbidden"}, 403
 
-        # pie_chart
+        # pie_chart_data
         pie_chart_data = [
             len(db.session.query(answer)
                 .filter(answer.c.question_id == question_id)
-                .filter(answer.c.is_yes == True)
+                .filter(answer.c.is_yes == False)
                 .all()),
             len(db.session.query(answer)
                 .filter(answer.c.question_id == question_id)
-                .filter(answer.c.is_yes == False)
+                .filter(answer.c.is_yes == True)
                 .all())
         ]
 
-        # users
+        # answered users
         users = list(map(lambda x: x.to_dict(), question.answered_users))
 
         return {"pie_chart_data": pie_chart_data, "users": users}
+
+
+# TODO: get random
+@question_ns.route('/next')
+class QuestionNext(Resource):
+    @question_ns.doc(
+        security='jwt_auth',
+        description='Get the next question_id at random'
+                    'that is using for the next question page.(* only unanswered and not owned question).'
+    )
+    @jwt_required()
+    def get(self):
+        answered_question_ids = list(map(lambda x: x.id, current_user.answers))
+        owner_question_ids = list(map(lambda x: x.id, current_user.questions))
+        question = Question.query.filter(Question.id.notin_(answered_question_ids + owner_question_ids))\
+            .order_by(func.rand()) \
+            .limit(1)\
+            .first()
+        if not question:
+            return {"status": 200, "message": "none", "data": None}
+        return {"status": 200, "message": "ok", "data": question.id}
 
 
 @question_ns.route('/timeline')
