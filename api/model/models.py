@@ -139,11 +139,7 @@ class User(db.Model):
     def is_following(self, user):
         return list(filter(lambda x: x.id == user.id, self.followings))
 
-    # answer
-    # def answer_question(self, question):
-    #     if not self.is_answered_question(question):
-    #         self.answers.append(question)
-
+    # is already answered
     def is_answered_question(self, question):
         return list(filter(lambda x: x.id == question.id, self.answers))
 

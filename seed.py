@@ -4,7 +4,7 @@ from api.model.models import User, db, UserRole, Question
 from random import randrange
 from app import app
 
-# TODO: nameが文字数オーバする場合があるのでfakerにて文字数制限を追加する。
+
 def main():
     """take in flask app"""
     with app.app_context():
@@ -21,7 +21,13 @@ def main():
         # create 1~10 users.
         for n in range(1, 11):
             n = str(n)
-            name = faker_gen.name()
+            # continue while faker_name > 20;
+            name = ""
+            while not name:
+                faker_name = faker_gen.name()
+                if len(faker_name) <= 20:
+                    name = faker_name
+                    break
             name_replaced = name.replace(' ', '').replace('　', '')
             public_id = f'sample{n + n}'
             password = 'passpass'

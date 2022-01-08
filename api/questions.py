@@ -67,7 +67,7 @@ class QuestionIndex(Resource):
         return {"status": 201, "message": "the question created.", "data": question.to_dict()}, 201
 
 
-# TODO: duplicate key error and refactor.
+# TODO: improve the logics
 @question_ns.route('/answer')
 class QuestionsAnswer(Resource):
     @question_ns.doc(
@@ -79,7 +79,7 @@ class QuestionsAnswer(Resource):
     def post(self):
         params = request.json
         question = Question.query.filter_by(id=params["question_id"]).first()
-        if not question or question.user_id == current_user.id:
+        if not question or question.user_id == current_user.id or current_user.is_answered_question(question):
             return {"status": 400, "message": "bad request."}, 400
 
         result = None
@@ -126,6 +126,7 @@ class QuestionsAnswer(Resource):
         return {"message": result}
 
 
+# common question info
 @question_ns.route('/<int:question_id>')
 class QuestionShow(Resource):
     @question_ns.doc(
@@ -141,6 +142,31 @@ class QuestionShow(Resource):
         return question.to_dict() | {
             "user": question.user.to_dict()
         }
+
+
+# only be accessed by the owner and answered users. todo
+@question_ns.route('/<int:question_id>/owner')
+class QuestionOwner(Resource):
+    @question_ns.doc(
+        security='jwt_auth',
+        description='Get the questions`s details information. (* only be accessed by the owner and answered users.)'
+    )
+    @jwt_required()
+    def get(self, question_id):
+        question = Question.query.filter_by(id=question_id).first()
+        if not question:
+            return {"status": 404, "message": "Not Found"}, 404
+
+        # pie_chart
+        pie_chart_data = {"yes": 12, "no": 32}
+
+        # line chart TODO
+        line_chart_data = {}
+
+        # users
+        users = list(map(lambda x: x.to_dict(), question.answered_users))
+
+        return {"pie_chart_data": pie_chart_data, "line_chart_data": line_chart_data, "users": users}
 
 
 @question_ns.route('/timeline')
