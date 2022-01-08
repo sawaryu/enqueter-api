@@ -114,6 +114,7 @@ class QuestionsAnswer(Resource):
                 else:
                     result = AnswerResult.wrong
 
+        # create answere
         insert_answer = answer.insert().values(
             user_id=current_user.id,
             question_id=question.id,
@@ -121,6 +122,11 @@ class QuestionsAnswer(Resource):
             result=result
         )
         db.session.execute(insert_answer)
+
+        # create notifications
+        current_user.create_answer_notification(question)
+
+        # commit
         db.session.commit()
 
         return {"message": result}
@@ -158,15 +164,21 @@ class QuestionOwner(Resource):
             return {"status": 404, "message": "Not Found"}, 404
 
         # pie_chart
-        pie_chart_data = {"yes": 12, "no": 32}
-
-        # line chart TODO
-        line_chart_data = {}
+        pie_chart_data = [
+            len(db.session.query(answer)
+                .filter(answer.c.question_id == question_id)
+                .filter(answer.c.is_yes == True)
+                .all()),
+            len(db.session.query(answer)
+                .filter(answer.c.question_id == question_id)
+                .filter(answer.c.is_yes == False)
+                .all())
+        ]
 
         # users
         users = list(map(lambda x: x.to_dict(), question.answered_users))
 
-        return {"pie_chart_data": pie_chart_data, "line_chart_data": line_chart_data, "users": users}
+        return {"pie_chart_data": pie_chart_data, "users": users}
 
 
 @question_ns.route('/timeline')
