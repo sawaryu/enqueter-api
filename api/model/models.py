@@ -17,6 +17,7 @@ relationship = db.Table('relationship',
                         UniqueConstraint('following_id', 'followed_id', name='relationship_unique_key')
                         )
 
+# TODO: もしかしたら通常のテーブルに変更
 answer = db.Table('answer',
                   db.Column('user_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
                   db.Column('question_id', Integer, ForeignKey('question.id', ondelete="CASCADE"), nullable=False),

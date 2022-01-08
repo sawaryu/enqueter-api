@@ -6,7 +6,8 @@ from flask_jwt_extended import jwt_required, current_user
 from flask_restx import Resource, Namespace, fields
 from sqlalchemy import func
 
-from api.model.models import User, db, relationship, SearchHistory, Question, bookmark, answer
+from api.model.enums import NotificationCategory
+from api.model.models import User, db, relationship, SearchHistory, Question, bookmark, answer, Notification
 
 user_ns = Namespace('/users')
 
@@ -178,7 +179,7 @@ class Relationship(Resource):
         db.session.commit()
         return {"status": 200, "message": f"done successfully follow the user:{user_id}"}
 
-    # unfollow
+    # unfollow todo: 同じ通知があれば削除する
     @user_ns.doc(
         security='jwt_auth',
         description='Unfollow the user.',
@@ -187,10 +188,20 @@ class Relationship(Resource):
     @jwt_required()
     def delete(self):
         user_id = request.json["user_id"]
+
+        # unfollow
         target_user = User.query.filter_by(id=user_id).first()
         if not target_user:
             return {"status": 409, "message": "The user may has been deleted."}, 409
         current_user.unfollow(target_user)
+
+        # delete notification if exist
+        Notification.query.filter_by(
+            passive_id=user_id,
+            active_id=current_user.id,
+            category=NotificationCategory.follow
+        ).delete()
+
         db.session.commit()
         return {"status": 200, "message": f"done successfully unfollow user:{user_id}"}
 
