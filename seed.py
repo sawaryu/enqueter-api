@@ -58,7 +58,7 @@ def main():
         """Question"""
         for n in range(1, 7):
             for n_2 in range(1, 5):
-                content = faker_gen.address() + "？"
+                content = faker_gen.address() + "?"
                 question = Question(
                     content=content,
                     user_id=n

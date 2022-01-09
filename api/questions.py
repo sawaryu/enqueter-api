@@ -11,7 +11,7 @@ from api.model.models import Question, db, User, answer
 question_ns = Namespace('/questions')
 
 questionCreate = question_ns.model('QuestionCreate', {
-    'content': fields.String(required=True, max_length=255, pattern=r'\S'),
+    'content': fields.String(required=True, max_length=140, pattern=r'\S'),
 })
 
 bookmarkCreateOrDelete = question_ns.model('BookmarkCreate', {
@@ -85,7 +85,8 @@ class QuestionsAnswer(Resource):
 
         result = None
 
-        if not question.answered_users:
+        # attention that below method is the 'Dynamic'. So it should be got by the 'all()' method.
+        if not question.answered_users.all():
             result = AnswerResult.first
 
         else:
@@ -193,7 +194,7 @@ class QuestionNext(Resource):
     )
     @jwt_required()
     def get(self):
-        answered_question_ids = list(map(lambda x: x.id, current_user.answers))
+        answered_question_ids = list(map(lambda x: x.id, current_user.answered_questions))
         owner_question_ids = list(map(lambda x: x.id, current_user.questions))
         question = Question.query.filter(Question.id.notin_(answered_question_ids + owner_question_ids))\
             .order_by(func.rand()) \

@@ -303,3 +303,17 @@ class UsersSearchHistoryShow(Resource):
             "status": 200,
             "message": "The search history was deleted."
         }
+
+
+# TODO: very difficult logics.
+@user_ns.route('/ranking')
+class UserRanking(Resource):
+    @user_ns.doc(
+        security='jwt_auth',
+        description='Get the users ranking top 10 (by pt)'
+    )
+    @jwt_required()
+    def get(self):
+        # total
+        users = User.query.filter(User.point != 0).order_by(User.point.desc()).limit(10)
+        return list(map(lambda x: x.to_dict(), users))

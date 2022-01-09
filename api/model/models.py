@@ -3,7 +3,7 @@ from datetime import datetime
 from flask_jwt_extended import current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
-from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum, func
+from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
 from datetime import timedelta
 
 from api.model.enums import UserRole, NotificationCategory, AnswerResult
@@ -57,11 +57,11 @@ class User(db.Model):
     questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
                                 cascade='all, delete-orphan')
 
-    answers = db.relationship(
+    answered_questions = db.relationship(
         'Question',
         order_by="desc(answer.c.created_at)",
         secondary=answer,
-        backref="answered_users",
+        back_populates="answered_users",
         lazy="dynamic"
     )
 
@@ -142,7 +142,7 @@ class User(db.Model):
 
     # is already answered
     def is_answered_question(self, question):
-        return list(filter(lambda x: x.id == question.id, self.answers))
+        return list(filter(lambda x: x.id == question.id, self.answered_questions))
 
     # bookmark
     def bookmark_question(self, question):
@@ -191,10 +191,18 @@ class User(db.Model):
 class Question(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
-    content = Column(String(255), nullable=False)
+    content = Column(String(140), nullable=False)
     closed_at = Column(DateTime, nullable=False, default=(datetime.now() + timedelta(weeks=1)))
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+
+    answered_users = db.relationship(
+        'User',
+        order_by="desc(answer.c.created_at)",
+        secondary=answer,
+        back_populates="answered_questions",
+        lazy="dynamic"
+    )
 
     # if the question has been created at before more than a week, it is treated as 'closed' question.
     def is_open(self):
