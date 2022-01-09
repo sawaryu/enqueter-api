@@ -19,11 +19,12 @@ class NotificationCategory(str, enum.Enum):
         return list(map(lambda x: x.value, cls))
 
 
-class AnswerResult(str, enum.Enum):
-    right = "right"
-    wrong = "wrong"
-    even = "even"
-    first = "first"
+# *not using in the Model
+class AnswerResultPoint(enum.IntEnum):
+    RIGHT = 3
+    WRONG = -2
+    EVEN = 0
+    FIRST = 1
 
     @classmethod
     def get_value_list(cls):

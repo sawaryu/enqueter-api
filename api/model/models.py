@@ -6,7 +6,7 @@ from flask_marshmallow import Marshmallow
 from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
 from datetime import timedelta
 
-from api.model.enums import UserRole, NotificationCategory, AnswerResult
+from api.model.enums import UserRole, NotificationCategory, AnswerResultPoint
 
 db = SQLAlchemy()
 ma = Marshmallow()
@@ -22,7 +22,7 @@ answer = db.Table('answer',
                   db.Column('user_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
                   db.Column('question_id', Integer, ForeignKey('question.id', ondelete="CASCADE"), nullable=False),
                   db.Column('is_yes', Boolean, nullable=False),
-                  db.Column('result', Enum(AnswerResult), nullable=False),
+                  db.Column('result_point', Integer, nullable=False),
                   db.Column('created_at', DateTime, nullable=False, default=datetime.now()),
                   UniqueConstraint('user_id', 'question_id', name='answer_unique_key')
                   )
@@ -49,7 +49,6 @@ class User(db.Model):
     name_replaced = Column(String(20), nullable=False)
     introduce = Column(String(140), nullable=False, default="")
     avatar = Column(String(255), nullable=False)
-    point = Column(Integer, nullable=False, default=0)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.user)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
@@ -121,7 +120,6 @@ class User(db.Model):
             "name": self.name,
             "introduce": self.introduce,
             "avatar": self.avatar,
-            "point": self.point,
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
             "is_following": True if current_user.is_following(self) else False,

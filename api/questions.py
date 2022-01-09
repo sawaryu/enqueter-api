@@ -5,7 +5,7 @@ from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
-from api.model.enums import AnswerResult
+from api.model.enums import AnswerResultPoint
 from api.model.models import Question, db, User, answer
 
 question_ns = Namespace('/questions')
@@ -85,43 +85,43 @@ class QuestionsAnswer(Resource):
 
         result = None
 
-        # attention that below method is the 'Dynamic'. So it should be got by the 'all()' method.
+        # attention that below method is the 'Dynamic'. So it should be got by the 'all()' method finally.
         if not question.answered_users.all():
-            result = AnswerResult.first
+            result = AnswerResultPoint.FIRST.value
 
         else:
             yes_count = len(db.session.query(answer)
                             .filter(answer.c.question_id == params["question_id"])
-                            .filter(answer.c.is_yes == True)
+                            .filter(answer.c.is_yes == 1)
                             .all())
 
             no_count = len(db.session.query(answer)
                            .filter(answer.c.question_id == params["question_id"])
-                           .filter(answer.c.is_yes == False)
+                           .filter(answer.c.is_yes == 0)
                            .all())
             if request.json["is_yes"]:
                 yes_count += 1
                 if yes_count == no_count:
-                    result = AnswerResult.even
+                    result = AnswerResultPoint.EVEN.value
                 elif yes_count > no_count:
-                    result = AnswerResult.right
+                    result = AnswerResultPoint.RIGHT.value
                 else:
-                    result = AnswerResult.wrong
+                    result = AnswerResultPoint.WRONG.value
             else:
                 no_count += 1
                 if yes_count == no_count:
-                    result = AnswerResult.even
+                    result = AnswerResultPoint.EVEN.value
                 elif no_count > yes_count:
-                    result = AnswerResult.right
+                    result = AnswerResultPoint.RIGHT.value
                 else:
-                    result = AnswerResult.wrong
+                    result = AnswerResultPoint.WRONG.value
 
         # create answere
         insert_answer = answer.insert().values(
             user_id=current_user.id,
             question_id=question.id,
             is_yes=params["is_yes"],
-            result=result
+            result_point=result
         )
         db.session.execute(insert_answer)
 
@@ -170,21 +170,27 @@ class QuestionOwner(Resource):
         pie_chart_data = [
             len(db.session.query(answer)
                 .filter(answer.c.question_id == question_id)
-                .filter(answer.c.is_yes == False)
+                .filter(answer.c.is_yes == 0)
                 .all()),
             len(db.session.query(answer)
                 .filter(answer.c.question_id == question_id)
-                .filter(answer.c.is_yes == True)
+                .filter(answer.c.is_yes == 1)
                 .all())
         ]
 
         # answered users
-        users = list(map(lambda x: x.to_dict(), question.answered_users))
+        objects = db.session.query(User, answer)\
+            .join(answer, answer.c.user_id == User.id)\
+            .filter(answer.c.question_id == question_id)\
+            .order_by(answer.c.created_at.desc())\
+            .all()
+        users = list(map(lambda x: x.User.to_dict() | {
+            "is_yes": x[3]
+        }, objects))
 
         return {"pie_chart_data": pie_chart_data, "users": users}
 
 
-# TODO: get random
 @question_ns.route('/next')
 class QuestionNext(Resource):
     @question_ns.doc(
@@ -196,9 +202,9 @@ class QuestionNext(Resource):
     def get(self):
         answered_question_ids = list(map(lambda x: x.id, current_user.answered_questions))
         owner_question_ids = list(map(lambda x: x.id, current_user.questions))
-        question = Question.query.filter(Question.id.notin_(answered_question_ids + owner_question_ids))\
+        question = Question.query.filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
             .order_by(func.rand()) \
-            .limit(1)\
+            .limit(1) \
             .first()
         if not question:
             return {"status": 200, "message": "none", "data": None}

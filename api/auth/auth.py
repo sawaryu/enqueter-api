@@ -208,7 +208,6 @@ class ProtectedApi(Resource):
             introduce=current_user.introduce,
             name=current_user.name,
             role=current_user.role,
-            point=current_user.point,
             created_at=current_user.created_at,
             updated_at=current_user.updated_at
         )
