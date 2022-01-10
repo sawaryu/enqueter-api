@@ -3,7 +3,7 @@ from flask import request
 
 from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
-from sqlalchemy import func
+from sqlalchemy import func, desc
 
 from api.model.enums import AnswerResultPoint
 from api.model.models import Question, db, User, answer

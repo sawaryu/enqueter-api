@@ -1,5 +1,5 @@
 import http
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import request
 from flask_jwt_extended import jwt_required, current_user
@@ -310,10 +310,27 @@ class UsersSearchHistoryShow(Resource):
 class UserRanking(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get the users ranking top 10 (by pt)'
+        description='Get the users ranking top 10 (by pt)',
+        params={'period': {'type': 'str', 'enum': ['week', 'month', 'all'], 'required': True}}
     )
     @jwt_required()
     def get(self):
+        # get query parameter.
+        period = request.args.get("period")
+        d = {}
+        if period == "week":
+            d = {"days": 7}
+        elif period == "month":
+            d = {"days": 30}
+        elif period == "all":
+            d = {"days": 365*100}
+
         # total
-        users = User.query.filter(User.point != 0).order_by(User.point.desc()).limit(10)
-        return list(map(lambda x: x.to_dict(), users))
+        objects = db.session.query(User, func.sum(answer.c.result_point).label("total_point")) \
+            .join(answer, answer.c.user_id == User.id) \
+            .filter(answer.c.created_at > (datetime.now() - timedelta(**d))) \
+            .group_by(User.id) \
+            .order_by(func.sum(answer.c.result_point).desc()) \
+            .limit(10).all()
+
+        return list(map(lambda x: x.User.to_dict() | {"total_point": int(x.total_point)}, objects))
