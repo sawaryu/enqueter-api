@@ -6,7 +6,7 @@ from flask_marshmallow import Marshmallow
 from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
 from datetime import timedelta
 
-from api.model.enums import UserRole, NotificationCategory, AnswerResultPoint
+from api.model.enums import UserRole, NotificationCategory
 
 db = SQLAlchemy()
 ma = Marshmallow()

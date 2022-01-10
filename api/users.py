@@ -179,7 +179,7 @@ class Relationship(Resource):
         db.session.commit()
         return {"status": 200, "message": f"done successfully follow the user:{user_id}"}
 
-    # unfollow todo: 同じ通知があれば削除する
+    # unfollow
     @user_ns.doc(
         security='jwt_auth',
         description='Unfollow the user.',
@@ -206,7 +206,7 @@ class Relationship(Resource):
         return {"status": 200, "message": f"done successfully unfollow user:{user_id}"}
 
 
-# Search TODO: improve search algorithm.
+# Search
 @user_ns.route('/search')
 class UsersSearch(Resource):
     @user_ns.doc(
@@ -305,7 +305,6 @@ class UsersSearchHistoryShow(Resource):
         }
 
 
-# TODO: very difficult logics.
 @user_ns.route('/ranking')
 class UserRanking(Resource):
     @user_ns.doc(
@@ -317,13 +316,15 @@ class UserRanking(Resource):
     def get(self):
         # get query parameter.
         period = request.args.get("period")
+        if period not in ["week", "month", "all"]:
+            return {"status": 400, "message": "Bad request"}, 400
         d = {}
         if period == "week":
             d = {"days": 7}
         elif period == "month":
             d = {"days": 30}
         elif period == "all":
-            d = {"days": 365*100}
+            d = {"days": 365 * 100}
 
         # total
         objects = db.session.query(User, func.sum(answer.c.result_point).label("total_point")) \
@@ -334,3 +335,55 @@ class UserRanking(Resource):
             .limit(10).all()
 
         return list(map(lambda x: x.User.to_dict() | {"total_point": int(x.total_point)}, objects))
+
+
+# TODO
+@user_ns.route('/<user_id>/stats')
+class UserStats(Resource):
+    @user_ns.doc(
+        security='jwt_auth',
+        description='Get the user stats by user_id.',
+        params={'period': {'in': 'query', 'type': 'str', 'enum': ['week', 'month', 'all']}},
+    )
+    @jwt_required()
+    def get(self, user_id):
+        # get the user
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            return {"status": 404, "message": "Not Found"}, 404
+
+        # get query parameter.
+        period = request.args.get("period")
+        if period not in ["week", "month", "all"]:
+            return {"status": 400, "message": "Bad request"}, 400
+        d = {}
+        if period == "week":
+            d = {"days": 7}
+        elif period == "month":
+            d = {"days": 30}
+        elif period == "all":
+            d = {"days": 365 * 100}
+
+        # execute sql
+        objects = db.session.query(User, func.sum(answer.c.result_point).label("total_point")) \
+            .join(answer, answer.c.user_id == User.id) \
+            .filter(answer.c.created_at > (datetime.now() - timedelta(**d))) \
+            .group_by(User.id) \
+            .order_by(func.sum(answer.c.result_point).desc()) \
+            .all()
+
+        users = list(map(lambda x: x.User.to_dict() | {
+            "total_point": int(x[1])
+        }, objects))
+
+        target_user = None
+        for (index, user) in enumerate(users):
+            user["rank"] = index + 1
+            if user["id"] == int(user_id):
+                target_user = user
+                break
+
+        if target_user:
+            return {"total_point": target_user["total_point"], "rank": target_user["rank"]}
+        else:
+            return {"total_point": None, "rank": None}
