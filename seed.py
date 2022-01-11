@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from faker import Faker
 from werkzeug.security import generate_password_hash
 from api.model.models import User, db, UserRole, Question
@@ -64,6 +66,19 @@ def main():
                     user_id=n
                 )
                 db.session.add(question)
+        db.session.commit()
+
+        """Closed Question"""
+        for n in range(1, 7):
+            content = faker_gen.address() + "?"
+            question = Question(
+                content=content,
+                user_id=n,
+                closed_at=datetime.now(),
+                created_at=datetime.now() - timedelta(days=7)
+            )
+            db.session.add(question)
+
         db.session.commit()
 
 

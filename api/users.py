@@ -386,4 +386,4 @@ class UserStats(Resource):
         if target_user:
             return {"total_point": target_user["total_point"], "rank": target_user["rank"]}
         else:
-            return {"total_point": None, "rank": None}
+            return {"total_point": 0, "rank": None}

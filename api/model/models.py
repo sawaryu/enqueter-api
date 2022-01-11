@@ -14,6 +14,7 @@ ma = Marshmallow()
 relationship = db.Table('relationship',
                         db.Column('following_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
                         db.Column('followed_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
+                        db.Column('created_at', DateTime, nullable=False, default=datetime.now()),
                         UniqueConstraint('following_id', 'followed_id', name='relationship_unique_key')
                         )
 
@@ -76,12 +77,14 @@ class User(db.Model):
         'User', secondary='relationship',
         primaryjoin=(relationship.c.followed_id == id),
         secondaryjoin=(relationship.c.following_id == id),
+        order_by="desc(relationship.c.created_at)",
         back_populates='followings')
 
     followings = db.relationship(
         'User', secondary='relationship',
         primaryjoin=(relationship.c.following_id == id),
         secondaryjoin=(relationship.c.followed_id == id),
+        order_by="desc(relationship.c.created_at)",
         back_populates='follower')
 
     histories = db.relationship(
