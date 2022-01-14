@@ -3,7 +3,7 @@ from flask import request
 
 from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
-from sqlalchemy import func, desc
+from sqlalchemy import func
 
 from api.model.enums import AnswerResultPoint
 from api.model.models import Question, db, User, answer
@@ -73,14 +73,15 @@ class QuestionIndex(Resource):
 class QuestionsAnswer(Resource):
     @question_ns.doc(
         security='jwt_auth',
-        description='Create a Answer to the Question got by question_id.',
+        description='Create a Answer to the Question got by question_id.(not answer to closed question.)',
         body=answerCreateModel
     )
     @jwt_required()
     def post(self):
         params = request.json
         question = Question.query.filter_by(id=params["question_id"]).first()
-        if not question or question.user_id == current_user.id or current_user.is_answered_question(question):
+        if not question or not question.is_open() or question.user_id == current_user.id \
+                or current_user.is_answered_question(question):
             return {"status": 400, "message": "bad request."}, 400
 
         result = None
@@ -157,13 +158,15 @@ class QuestionOwner(Resource):
     @question_ns.doc(
         security='jwt_auth',
         description='Get the questions`s details information. (* only be accessed by the owner and answered users.)'
+                    '(* if closed, all the user can access.)'
     )
     @jwt_required()
     def get(self, question_id):
         question = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
-        elif question.user_id != current_user.id and not current_user.is_answered_question(question):
+        elif question.is_open() and not question.user_id == current_user.id \
+                and not current_user.is_answered_question(question):
             return {"status": 403, "message": "Forbidden"}, 403
 
         # pie_chart_data
@@ -179,10 +182,10 @@ class QuestionOwner(Resource):
         ]
 
         # answered users
-        objects = db.session.query(User, answer)\
-            .join(answer, answer.c.user_id == User.id)\
-            .filter(answer.c.question_id == question_id)\
-            .order_by(answer.c.created_at.desc())\
+        objects = db.session.query(User, answer) \
+            .join(answer, answer.c.user_id == User.id) \
+            .filter(answer.c.question_id == question_id) \
+            .order_by(answer.c.created_at.desc()) \
             .all()
         users = list(map(lambda x: x.User.to_dict() | {
             "is_yes": x[3]
@@ -202,7 +205,10 @@ class QuestionNext(Resource):
     def get(self):
         answered_question_ids = list(map(lambda x: x.id, current_user.answered_questions))
         owner_question_ids = list(map(lambda x: x.id, current_user.questions))
-        question = Question.query.filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
+
+        question = Question.query\
+            .filter(Question.closed_at > datetime.now()) \
+            .filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
             .order_by(func.rand()) \
             .limit(1) \
             .first()
