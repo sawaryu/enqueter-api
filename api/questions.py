@@ -14,6 +14,10 @@ questionCreate = question_ns.model('QuestionCreate', {
     'content': fields.String(required=True, max_length=140, pattern=r'\S'),
 })
 
+questionDelete = question_ns.model('QuestionDelete', {
+    'question_id': fields.Integer(required=True)
+})
+
 bookmarkCreateOrDelete = question_ns.model('BookmarkCreate', {
     'question_id': fields.Integer(required=True)
 })
@@ -67,6 +71,23 @@ class QuestionIndex(Resource):
 
         return {"status": 201, "message": "the question created.", "data": question.to_dict()}, 201
 
+    @question_ns.doc(
+        security='jwt_auth',
+        body=questionDelete,
+        description='Delete a question (* Only the owner user can take operation).'
+    )
+    @jwt_required()
+    def delete(self):
+        question_id = request.json['question_id']
+        question = Question.query.filter_by(id=question_id).first()
+        if not question or not question.user_id == current_user.id:
+            return {"status": 401, "message": "Unauthorized"}, 401
+
+        db.session.delete(question)
+        db.session.commit()
+
+        return {"status": 200, "message": "The question was successfully deleted."}, 200
+
 
 # TODO: improve the logics
 @question_ns.route('/answer')
@@ -83,8 +104,6 @@ class QuestionsAnswer(Resource):
         if not question or not question.is_open() or question.user_id == current_user.id \
                 or current_user.is_answered_question(question):
             return {"status": 400, "message": "bad request."}, 400
-
-        result = None
 
         # attention that below method is the 'Dynamic'. So it should be got by the 'all()' method finally.
         if not question.answered_users.all():
@@ -117,7 +136,7 @@ class QuestionsAnswer(Resource):
                 else:
                     result = AnswerResultPoint.WRONG.value
 
-        # create answere
+        # create answer
         insert_answer = answer.insert().values(
             user_id=current_user.id,
             question_id=question.id,
@@ -206,7 +225,7 @@ class QuestionNext(Resource):
         answered_question_ids = list(map(lambda x: x.id, current_user.answered_questions))
         owner_question_ids = list(map(lambda x: x.id, current_user.questions))
 
-        question = Question.query\
+        question = Question.query \
             .filter(Question.closed_at > datetime.now()) \
             .filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
             .order_by(func.rand()) \
