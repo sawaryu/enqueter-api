@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
 from api.model.enums import AnswerResultPoint
-from api.model.models import Question, db, User, answer
+from api.model.models import Question, db, User, answer, Notification
 
 question_ns = Namespace('/questions')
 
@@ -83,6 +83,9 @@ class QuestionIndex(Resource):
         if not question or not question.user_id == current_user.id:
             return {"status": 401, "message": "Unauthorized"}, 401
 
+        # notification delete
+        Notification.query.filter_by(question_id=question_id).delete()
+
         db.session.delete(question)
         db.session.commit()
 
@@ -101,9 +104,14 @@ class QuestionsAnswer(Resource):
     def post(self):
         params = request.json
         question = Question.query.filter_by(id=params["question_id"]).first()
-        if not question or not question.is_open() or question.user_id == current_user.id \
-                or current_user.is_answered_question(question):
-            return {"status": 400, "message": "bad request."}, 400
+        if not question:
+            return {"status": 404, "message": "Not Found"}, 404
+
+        if not question.is_open():
+            return {"status": 409, "message": "The questions had been closed already."}, 409
+
+        if question.user_id == current_user.id  or current_user.is_answered_question(question):
+            return {"status": 400, "message": "Bad request"}, 400
 
         # attention that below method is the 'Dynamic'. So it should be got by the 'all()' method finally.
         if not question.answered_users.all():
