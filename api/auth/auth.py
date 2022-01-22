@@ -1,11 +1,12 @@
 import http
 import os
+import re
 import traceback
 from datetime import datetime, timezone
 from random import randrange
 from time import time
 
-from flask import request, jsonify, redirect, render_template, make_response
+from flask import request, jsonify, redirect
 from flask_jwt_extended import (
     create_access_token,
     current_user,
@@ -33,7 +34,7 @@ signup = auth_ns.model('AuthSignup', {
 })
 
 login = auth_ns.model('AuthLogin', {
-    'public_id': fields.String(required=True),
+    'public_id_or_email': fields.String(required=True),
     'password': fields.String(required=True),
 })
 
@@ -59,7 +60,7 @@ class AuthBasic(Resource):
         params = request.json
 
         if User.query.filter_by(public_id=params['public_id']).one_or_none():
-            return {"status": 400, "message": "ID is already used."}, 400
+            return {"status": 400, "message": "user_id is already used."}, 400
 
         if User.query.filter_by(email=params['email']).one_or_none():
             return {"status": 400, "message": "Email is already used."}, 400
@@ -92,7 +93,7 @@ class AuthBasic(Resource):
             # delete the user if any error happen.
             db.session.delete(user)
             db.session.commit()
-            return {"message": str(e)}, 500
+            return {"message": str(e)}, 400
         except:
             # delete the user if any error happen.
             traceback.print_exc()
@@ -157,7 +158,6 @@ class AuthBasic(Resource):
                }, 201
 
 
-# TODO: Email and public_id authentication needed.
 @auth_ns.route('/login')
 class AuthLogin(Resource):
     @auth_ns.doc(
@@ -166,7 +166,13 @@ class AuthLogin(Resource):
     )
     def post(self):
         params = request.json
-        user = User.query.filter_by(public_id=params['public_id']).one_or_none()
+        identify = params['public_id_or_email']
+
+        user = None
+        if re.fullmatch(public_id_regex, identify):
+            user = User.query.filter_by(public_id=identify).one_or_none()
+        elif re.fullmatch(email_regex, identify):
+            user = User.query.filter_by(email=identify).one_or_none()
 
         if user and check_password_hash(user.password, params['password']):
             confirmation = user.most_recent_confirmation
@@ -174,10 +180,10 @@ class AuthLogin(Resource):
                 access_token = create_access_token(identity=user)
                 refresh_token = create_refresh_token(identity=user)
                 return jsonify(access_token=access_token, refresh_token=refresh_token)
-            return {"message": "You have not confirmed registration, "
-                               f"please check your email <{user.email}>."}, 400
+            return {"message": "You have not confirmed registration.", "user_id_not_confirmed": user.id}, 400
 
-        return {"status": 401, "message": "Incorrect user id or password."}, http.HTTPStatus.UNAUTHORIZED
+        return {"status": 401, "message": "Incorrect user_id (email) or password.",
+                "user_id_not_confirmed": None}, http.HTTPStatus.UNAUTHORIZED
 
 
 @auth_ns.route('/logout')
@@ -269,16 +275,16 @@ class AuthConfirm(Resource):
         if confirmation.is_expired:
             return {"message": "That link is expired."}, 400
         if confirmation.confirmed:
-            return {"message": "You are already confirmed."}, 400
+            return {"message": "You are already confirmed."}, 200
 
         confirmation.confirmed = True
         db.session.commit()
 
         # redirect to Frontend page.
-        return redirect("http://localhost:3000/welcome", code=302)
+        return redirect(f"http://localhost:3000/welcome?confirm={confirmation_id}", code=302)
 
 
-@auth_ns.route('/<int:user_id>/confirm/resent')
+@auth_ns.route('/<int:user_id>/confirm/resend')
 class AuthConfirmResent(Resource):
     """For testing"""
     @auth_ns.doc(

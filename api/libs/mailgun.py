@@ -32,6 +32,6 @@ class MailGun:
         )
 
         if response.status_code != 200:
-            raise MailGunException("Error in sending confirmation email, user registration failed.")
+            raise MailGunException("Error in sending confirmation email.")
 
         return response
