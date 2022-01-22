@@ -1,10 +1,13 @@
 from datetime import datetime
-
+from time import time
+from uuid import uuid4
+from flask import Response, request
 from flask_jwt_extended import current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
 from datetime import timedelta
+from api.libs.mailgun import MailGun
 
 from api.model.enums import UserRole, NotificationCategory
 
@@ -42,10 +45,52 @@ class TokenBlocklist(db.Model):
     created_at = Column(DateTime, nullable=False)
 
 
+CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
+
+
+class Confirmation(db.Model):
+    id = Column(String(50), primary_key=True)
+    expire_at = Column(Integer, nullable=False)
+    confirmed = Column(Boolean, nullable=False, default=False)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+
+    def __init__(self, user_id: int, **kwargs):
+        super().__init__(**kwargs)
+        self.user_id = user_id
+        self.id = uuid4().hex
+        self.expire_at = int(time()) + CONFIRMATION_EXPIRE_DELTA
+        self.confirmed = False
+
+    """For testing, it should not be used for the production environment."""
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "expire_at": self.expire_at,
+            "confirmed": self.confirmed,
+            "user_id": self.user_id
+        }
+
+    @classmethod
+    def find_by_if(cls, _id) -> "Confirmation":
+        return cls.query.filter_by(id=_id).first()
+
+    # treat as like property. not using bracket when calling.
+    # "time()" is the UNIX elapsed time.
+    @property
+    def is_expired(self) -> bool:
+        return time() > self.expire_at
+
+    def force_to_expire(self) -> None:
+        if not self.is_expired:
+            self.expire_at = time()
+            db.session.commit()
+
+
 class User(db.Model):
     id = Column(Integer, primary_key=True)
     public_id = Column(String(15), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, unique=True)
     name = Column(String(20), nullable=False)
     name_replaced = Column(String(20), nullable=False)
     introduce = Column(String(140), nullable=False, default="")
@@ -53,6 +98,8 @@ class User(db.Model):
     role = Column(Enum(UserRole), nullable=False, default=UserRole.user)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+
+    confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
 
     questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
                                 cascade='all, delete-orphan')
@@ -120,6 +167,7 @@ class User(db.Model):
         return {
             "id": self.id,
             "public_id": self.public_id,
+            "email": self.email,
             "name": self.name,
             "introduce": self.introduce,
             "avatar": self.avatar,
@@ -128,6 +176,18 @@ class User(db.Model):
             "is_following": True if current_user.is_following(self) else False,
             "role": self.role
         }
+
+    @property
+    def most_recent_confirmation(self) -> Confirmation:
+        # Because of setting dynamic to "confirmations", it can be to take sequence of querying.
+        return self.confirmations.order_by(Confirmation.expire_at.desc()).first()
+
+    def send_confirmation_email(self) -> Response:
+        # ex: https://127.0.0.1:5000/ > https://127.0.0.1:5000
+        link = request.url_root[0:-1] + f"/api/v1/auth/{self.most_recent_confirmation.id}/confirm"
+        subject = "Registration confirmation"
+        text = f"Hi,{self.name}. Please click the link to confirm your account {link}"
+        return MailGun.send_email([self.email], subject, text)
 
     # relationship
     def follow(self, user):

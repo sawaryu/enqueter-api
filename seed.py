@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from faker import Faker
 from werkzeug.security import generate_password_hash
-from api.model.models import User, db, UserRole, Question
+from api.model.models import User, Confirmation, db, UserRole, Question
 from random import randrange
 from app import app
 
@@ -32,6 +32,7 @@ def main():
                     break
             name_replaced = name.replace(' ', '').replace('　', '')
             public_id = f'sample{n + n}'
+            email = f"sample{n}@sample.com"
             password = 'passpass'
             avatar = f'egg_{randrange(1, 11)}.png'
             introduce = faker_gen.company()
@@ -41,12 +42,19 @@ def main():
                 name=name,
                 name_replaced=name_replaced,
                 public_id=public_id,
+                email=email,
                 password=generate_password_hash(password, method='sha256'),
                 avatar=avatar,
                 introduce=introduce,
                 role=role
             )
             db.session.add(new_user)
+            db.session.commit()
+
+            # confirmation
+            confirmation = Confirmation(new_user.id)
+            confirmation.confirmed = True
+            db.session.add(confirmation)
             db.session.commit()
 
         """Relationship"""

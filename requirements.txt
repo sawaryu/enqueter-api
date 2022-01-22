@@ -19,3 +19,4 @@ faker
 pymysql
 marshmallow-sqlalchemy
 Flask-Migrate
+requests
