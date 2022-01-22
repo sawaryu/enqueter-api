@@ -14,7 +14,7 @@ class MailGun:
     MAILGUN_DOMAIN_NAME = os.getenv("MAILGUN_DOMAIN_NAME")
 
     @classmethod
-    def send_email(cls, email: list[str], subject: str, text: str) -> Response:
+    def send_email(cls, email: list[str], subject: str, text: str, html: str) -> Response:
 
         if cls.MAILGUN_API_KEY is None:
             raise MailGunException("Failed to load MailGun API key.")
@@ -24,10 +24,11 @@ class MailGun:
         response = post(
             f"https://api.mailgun.net/v3/{cls.MAILGUN_DOMAIN_NAME}/messages",
             auth=("api", cls.MAILGUN_API_KEY),
-            data={"from": f"Enqueter <mailgun@{cls.MAILGUN_DOMAIN_NAME}>",
+            data={"from": f"Enqueter <not-reply@{cls.MAILGUN_DOMAIN_NAME}>",
                   "to": email,
                   "subject": subject,
-                  "text": text}
+                  "text": text,
+                  "html": html}
         )
 
         if response.status_code != 200:

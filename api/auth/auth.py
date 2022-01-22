@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from random import randrange
 from time import time
 
-from flask import request, jsonify, redirect
+from flask import request, jsonify, redirect, render_template, make_response
 from flask_jwt_extended import (
     create_access_token,
     current_user,
@@ -260,7 +260,6 @@ class ProtectedApi(Resource):
 class AuthConfirm(Resource):
     """When click the confirmation link"""
     @auth_ns.doc(
-        security='jwt_auth',
         description='Confirm the user is existing.'
     )
     def get(self, confirmation_id: str):
@@ -279,11 +278,10 @@ class AuthConfirm(Resource):
         return redirect("http://localhost:3000/welcome", code=302)
 
 
-@auth_ns.route('/<int:user_id>/confirm_testing')
-class AuthConfirmByUser(Resource):
+@auth_ns.route('/<int:user_id>/confirm/resent')
+class AuthConfirmResent(Resource):
     """For testing"""
     @auth_ns.doc(
-        security='jwt_auth',
         description='Confirmation testing (* should not be open to public.)'
     )
     def get(self, user_id):
@@ -305,7 +303,6 @@ class AuthConfirmByUser(Resource):
 
     """Resend the confirmation link"""
     @auth_ns.doc(
-        security='jwt_auth',
         description='Resend confirmation email.'
     )
     def post(self, user_id):

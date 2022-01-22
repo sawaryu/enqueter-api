@@ -1,7 +1,7 @@
 from datetime import datetime
 from time import time
 from uuid import uuid4
-from flask import Response, request
+from flask import Response, request, render_template
 from flask_jwt_extended import current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -186,8 +186,10 @@ class User(db.Model):
         # ex: https://127.0.0.1:5000/ > https://127.0.0.1:5000
         link = request.url_root[0:-1] + f"/api/v1/auth/{self.most_recent_confirmation.id}/confirm"
         subject = "Registration confirmation"
+        # for medias not compatible with html.
         text = f"Hi,{self.name}. Please click the link to confirm your account {link}"
-        return MailGun.send_email([self.email], subject, text)
+        html = render_template("confirm.html", name=self.name, link=link)
+        return MailGun.send_email([self.email], subject, text, html)
 
     # relationship
     def follow(self, user):

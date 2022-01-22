@@ -4,48 +4,24 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Bootstrap core CSS -->
-    <link href=https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css rel="stylesheet"
-          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <style>
-    .bd-placeholder-img {
-      font-size: 1.125rem;
-      text-anchor: middle;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      user-select: none;
-    }
-
-    @media (min-width: 768px) {
-      .bd-placeholder-img-lg {
-        font-size: 3.5rem;
-      }
-    }
-  </style>
 </head>
 
-<body class="d-flex h-100 text-center text-white bg-dark">
-
-<div class="cover-container d-flex w-100 h-100 p-3 mx-auto flex-column">
-    <header class="mb-auto">
+<body>
+    <header>
         <div>
-            <h3 class="float-md-start mb-0">Enqueter</h3>
+            <h3>Enqueter</h3>
         </div>
     </header>
 
-    <main class="px-3">
-        <h1>Welcome to Enqueter</h1>
-        <p class="lead">Please click the button to activate your account.</p>
-        <p class="lead">
-            <a href="#" class="btn btn-lg bg-white">activate</a>
-        </p>
-    </main>
+    <h1>Hi, {{name}}. Welcome to Enqueter</h1>
+    <p>Please click the link to activate your account.</p>
+    <span>
+        <a href="{{link}}">activate</a>
+    </span>
 
-    <footer class="mt-auto text-white-50">
+    <footer>
         <p>@ 2022 - Enqueter</p>
     </footer>
-</div>
 </body>
 
 </html>
