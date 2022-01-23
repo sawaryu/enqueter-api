@@ -88,14 +88,6 @@ class Confirmation(db.Model):
         self.expire_at = int(time()) + CONFIRMATION_EXPIRE_DELTA
         self.confirmed = False
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "expire_at": self.expire_at,
-            "confirmed": self.confirmed,
-            "user_id": self.user_id
-        }
-
     @classmethod
     def find_by_if(cls, _id) -> "Confirmation":
         return cls.query.filter_by(id=_id).first()

@@ -366,14 +366,13 @@ class AuthUpdateConfirmation(Resource):
             db.session.add(new_update_confirmation)
             db.session.commit()
             current_user.send_update_confirmation_email()
+            return {"status": 201, 'message': 'An email with token '
+                                              'has been sent to your email address, please check.'}, 201
         except MailGunException as e:
             return {"message": str(e)}, 400
         except:
             traceback.print_exc()
             return {"message": "Internal server error. Failed to resend the email."}, 500
-
-        return {"status": 201, 'message': 'An email with token '
-                                          'has been sent to your email address, please check.'}, 201
 
     @auth_ns.doc(
         security='jwt_auth',
@@ -393,6 +392,7 @@ class AuthUpdateConfirmation(Resource):
         if not update_confirmation.user_id == current_user.id:
             return {"message": "Illegal operation found."}, 400
 
+        # if the email is used while process of updating.
         if User.query.filter_by(email=update_confirmation.email).first():
             return {"status": 400, "message": "Sorry, E-mail is already used by someone."}, 400
 
