@@ -48,21 +48,21 @@ class TokenBlocklist(db.Model):
 CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
 
 
-class ReConfirmation(db.Model):
+class UpdateConfirmation(db.Model):
     id = Column(String(50), primary_key=True)
-    email = Column(String(255), nullable=False)
     expire_at = Column(Integer, nullable=False)
+    email = Column(String(255), nullable=False)
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
 
     def __init__(self, user_id: int, email: str, **kwargs):
         super().__init__(**kwargs)
+        self.id = uuid4().hex
         self.user_id = user_id
         self.email = email
-        self.id = uuid4().hex
         self.expire_at = int(time()) + CONFIRMATION_EXPIRE_DELTA
 
     @classmethod
-    def find_by_if(cls, _id) -> "Confirmation":
+    def find_by_if(cls, _id) -> "UpdateConfirmation":
         return cls.query.filter_by(id=_id).first()
 
     @property
@@ -88,7 +88,6 @@ class Confirmation(db.Model):
         self.expire_at = int(time()) + CONFIRMATION_EXPIRE_DELTA
         self.confirmed = False
 
-    """For testing, it should not be used for the production environment."""
     def to_dict(self):
         return {
             "id": self.id,
@@ -127,6 +126,8 @@ class User(db.Model):
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
     confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
+    update_confirmations = db.relationship('UpdateConfirmation', backref='user', lazy="dynamic",
+                                           cascade='all, delete-orphan')
 
     questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
                                 cascade='all, delete-orphan')
@@ -218,6 +219,18 @@ class User(db.Model):
         text = f"Hi,{self.name}. Please click the link to confirm your account {link}"
         html = render_template("confirm.html", name=self.name, link=link)
         return MailGun.send_email([self.email], subject, text, html)
+
+    @property
+    def most_recent_update_confirmation(self) -> UpdateConfirmation:
+        return self.update_confirmations.order_by(UpdateConfirmation.expire_at.desc()).first()
+
+    def send_update_confirmation_email(self) -> Response:
+        update_confirmation = self.most_recent_update_confirmation
+        subject = "Update E-mail."
+        token = update_confirmation.id
+        text = f"Hi,{self.name}. Please enter the token to Enqueter for confirming the new E-mail. token: {token}"
+        html = render_template("confirm_update.html", name=self.name, token=token)
+        return MailGun.send_email([update_confirmation.email], subject, text, html)
 
     # relationship
     def follow(self, user):

@@ -225,7 +225,7 @@ class QuestionOwner(Resource):
 class QuestionNext(Resource):
     @question_ns.doc(
         security='jwt_auth',
-        description='Get the next question_id at random'
+        description='Get the next question_id at random '
                     'that is using for the next question page.(* only unanswered and not owned question).'
     )
     @jwt_required()

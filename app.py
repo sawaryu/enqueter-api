@@ -56,7 +56,7 @@ api = Api(
     title='Enqueter API',
     version='1.0',
     license="SAMPLE license",
-    description='the sample API for the front application.',
+    description='the sample API',
     prefix='/api/v1',
     authorizations=authorizations
 )
