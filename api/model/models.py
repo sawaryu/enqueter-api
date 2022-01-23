@@ -1,7 +1,8 @@
+import os
 from datetime import datetime
 from time import time
 from uuid import uuid4
-from flask import Response, request, render_template
+from flask import Response, render_template
 from flask_jwt_extended import current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -21,7 +22,6 @@ relationship = db.Table('relationship',
                         UniqueConstraint('following_id', 'followed_id', name='relationship_unique_key')
                         )
 
-# TODO: もしかしたら通常のテーブルに変更
 answer = db.Table('answer',
                   db.Column('user_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
                   db.Column('question_id', Integer, ForeignKey('question.id', ondelete="CASCADE"), nullable=False),
@@ -46,6 +46,33 @@ class TokenBlocklist(db.Model):
 
 
 CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
+
+
+class ReConfirmation(db.Model):
+    id = Column(String(50), primary_key=True)
+    email = Column(String(255), nullable=False)
+    expire_at = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+
+    def __init__(self, user_id: int, email: str, **kwargs):
+        super().__init__(**kwargs)
+        self.user_id = user_id
+        self.email = email
+        self.id = uuid4().hex
+        self.expire_at = int(time()) + CONFIRMATION_EXPIRE_DELTA
+
+    @classmethod
+    def find_by_if(cls, _id) -> "Confirmation":
+        return cls.query.filter_by(id=_id).first()
+
+    @property
+    def is_expired(self) -> bool:
+        return time() > self.expire_at
+
+    def force_to_expire(self) -> None:
+        if not self.is_expired:
+            self.expire_at = time()
+            db.session.commit()
 
 
 class Confirmation(db.Model):
@@ -184,7 +211,8 @@ class User(db.Model):
 
     def send_confirmation_email(self) -> Response:
         # ex: https://127.0.0.1:5000/ > https://127.0.0.1:5000
-        link = request.url_root[0:-1] + f"/api/v1/auth/{self.most_recent_confirmation.id}/confirm"
+        # link = request.url_root[0:-1] + f"/api/v1/auth/{self.most_recent_confirmation.id}/confirm"
+        link = os.getenv("FRONT_WELCOME_URL") + f"?=confirm={self.most_recent_confirmation.id}"
         subject = "Registration confirmation"
         # for medias not compatible with html.
         text = f"Hi,{self.name}. Please click the link to confirm your account {link}"
