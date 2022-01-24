@@ -309,7 +309,7 @@ class UsersSearchHistoryShow(Resource):
 class UserRanking(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get the users ranking top 10 (by pt)',
+        description='Get the users ranking top 10 (by pt) and current_user rank info',
         params={'period': {'type': 'str', 'enum': ['week', 'month', 'all'], 'required': True}}
     )
     @jwt_required()
@@ -326,15 +326,25 @@ class UserRanking(Resource):
         elif period == "all":
             d = {"days": 365 * 100}
 
-        # total
         objects = db.session.query(User, func.sum(answer.c.result_point).label("total_point")) \
             .join(answer, answer.c.user_id == User.id) \
             .filter(answer.c.created_at > (datetime.now() - timedelta(**d))) \
             .group_by(User.id) \
             .order_by(func.sum(answer.c.result_point).desc()) \
-            .limit(10).all()
+            .all()
 
-        return list(map(lambda x: x.User.to_dict() | {"total_point": int(x.total_point)}, objects))
+        users = list(map(lambda x: x.User.to_dict() | {
+            "total_point": int(x[1])
+        }, objects))
+
+        target_user = None
+        for (index, user) in enumerate(users):
+            user["rank"] = index + 1
+            if user["id"] == int(current_user.id):
+                target_user = user
+                break
+
+        return {"users": users, "current_user": target_user}
 
 
 # TODO

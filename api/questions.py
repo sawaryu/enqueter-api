@@ -83,7 +83,7 @@ class QuestionIndex(Resource):
         if not question or not question.user_id == current_user.id:
             return {"status": 401, "message": "Unauthorized"}, 401
 
-        # notification delete
+        # delete notification
         Notification.query.filter_by(question_id=question_id).delete()
 
         db.session.delete(question)

@@ -22,7 +22,7 @@ class NotificationCategory(str, enum.Enum):
 # *not using in the Model
 class AnswerResultPoint(enum.IntEnum):
     RIGHT = 3
-    WRONG = -2
+    WRONG = -3
     EVEN = 0
     FIRST = 1
 
