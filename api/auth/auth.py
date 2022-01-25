@@ -26,9 +26,9 @@ from database import db
 auth_ns = Namespace('/auth')
 
 username_regex = r'\A[a-z\d]{1,15}\Z(?i)'
-nickname_regex = r'\S'
 email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
 password_regex = r'\A[a-z\d]{8,72}\Z(?i)'
+nickname_regex = r'\S'
 
 signup = auth_ns.model('AuthSignup', {
     'username': fields.String(pattern=username_regex, required=True),
@@ -194,7 +194,7 @@ class AuthLogin(Resource):
                 return jsonify(access_token=access_token, refresh_token=refresh_token)
             return {"message": "You have not confirmed registration.", "user_id_not_confirmed": user.id}, 400
 
-        return {"status": 401, "message": "Incorrect user_id (email) or password.",
+        return {"status": 401, "message": "Incorrect Username (E-mail) or Password.",
                 "user_id_not_confirmed": None}, http.HTTPStatus.UNAUTHORIZED
 
 

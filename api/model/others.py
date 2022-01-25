@@ -55,18 +55,21 @@ class Question(db.Model):
     )
 
     # if the question has been created at before more than a week, it is treated as 'closed' question.
-    def is_open(self):
+    @property
+    def is_open(self) -> bool:
         return datetime.now() < self.closed_at
 
     # whether current_user bookmarked the question.
-    def is_bookmarked(self):
+    @property
+    def is_bookmarked(self) -> bool:
         if current_user.is_bookmark_question(self):
             return True
         else:
             return False
 
     # whether current_user answered the question.
-    def is_answered(self):
+    @property
+    def is_answered(self) -> bool:
         if current_user.is_answered_question(self):
             return True
         else:
@@ -80,9 +83,9 @@ class Question(db.Model):
             "closed_at": str(self.closed_at),
             "created_at": str(self.created_at),
             "updated_at": str(self.updated_at),
-            "is_open": self.is_open(),
-            "is_answered": self.is_answered(),
-            "is_bookmarked": self.is_bookmarked()
+            "is_open": self.is_open,
+            "is_answered": self.is_answered,
+            "is_bookmarked": self.is_bookmarked
         }
 
 
