@@ -8,7 +8,7 @@ from flask_migrate import Migrate
 
 from api.auth.admin import admin_ns
 from api.auth.auth import auth_ns
-from api.model.models import TokenBlocklist
+from api.model.others import TokenBlocklist
 from api.model.user import User
 import config
 from api.notifications import notification_ns

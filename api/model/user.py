@@ -7,7 +7,7 @@ from api.libs.mailgun import MailGun
 from api.model.confirmation import Confirmation, UpdateConfirmation
 
 from api.model.enum.enums import UserRole, NotificationCategory
-from api.model.models import Notification, bookmark, answer, \
+from api.model.others import Notification, bookmark, answer, \
     user_relationship
 from database import db
 
