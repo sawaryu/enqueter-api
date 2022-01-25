@@ -1,6 +1,8 @@
 from flask_jwt_extended import current_user, jwt_required
 from flask_restx import Namespace, Resource
-from api.model.models import User, Notification, db
+from api.model.models import Notification
+from api.model.user import User
+from database import db
 
 notification_ns = Namespace('/notifications')
 

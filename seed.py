@@ -2,9 +2,13 @@ from datetime import datetime, timedelta
 
 from faker import Faker
 from werkzeug.security import generate_password_hash
-from api.model.models import User, Confirmation, db, UserRole, Question
+
+from api.model.enums import UserRole
+from api.model.models import Confirmation, Question
+from api.model.user import User
 from random import randrange
 from app import app
+from database import db
 
 
 def main():

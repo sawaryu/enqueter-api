@@ -15,9 +15,11 @@ from flask_jwt_extended import (
 )
 from flask_restx import Resource, fields, Namespace
 from werkzeug.security import check_password_hash, generate_password_hash
-from api.model.models import User, db, TokenBlocklist, Confirmation, UpdateConfirmation
+from api.model.models import TokenBlocklist, Confirmation, UpdateConfirmation
+from api.model.user import User
 from api.upload import client
 from api.libs.mailgun import MailGunException
+from database import db
 
 auth_ns = Namespace('/auth')
 
@@ -272,6 +274,7 @@ class ProtectedApi(Resource):
 @auth_ns.route('/<string:confirmation_id>/confirm')
 class AuthConfirm(Resource):
     """When click the confirmation link"""
+
     @auth_ns.doc(
         description='Confirm the user is existing.'
     )
@@ -295,6 +298,7 @@ class AuthConfirm(Resource):
 @auth_ns.route('/<int:user_id>/confirm/resend')
 class AuthConfirmResent(Resource):
     """Resend the confirmation link"""
+
     @auth_ns.doc(
         description='Resend confirmation email.'
     )
@@ -348,6 +352,7 @@ class AuthConfirmResent(Resource):
 @auth_ns.route('/update_confirmation')
 class AuthUpdateConfirmation(Resource):
     """reconfirmation email"""
+
     @auth_ns.doc(
         security='jwt_auth',
         description='Send email with token to new E-mail.',

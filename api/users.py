@@ -7,7 +7,9 @@ from flask_restx import Resource, Namespace, fields
 from sqlalchemy import func
 
 from api.model.enums import NotificationCategory
-from api.model.models import User, db, relationship, SearchHistory, Question, bookmark, answer, Notification
+from api.model.models import SearchHistory, Question, bookmark, answer, Notification, user_relationship
+from api.model.user import User
+from database import db
 
 user_ns = Namespace('/users')
 
@@ -218,11 +220,11 @@ class UsersSearch(Resource):
     def post(self):
         search = request.json["search"]
         search = "%{}%".format(search)
-        users_objects = db.session.query(User, func.count(relationship.c.followed_id).label("follower_count")) \
-            .outerjoin(relationship, relationship.c.followed_id == User.id) \
+        users_objects = db.session.query(User, func.count(user_relationship.c.followed_id).label("follower_count")) \
+            .outerjoin(user_relationship, user_relationship.c.followed_id == User.id) \
             .filter(User.id != current_user.id) \
             .filter((User.public_id + User.name_replaced).like(search)) \
-            .order_by(func.count(relationship.c.followed_id).desc()) \
+            .order_by(func.count(user_relationship.c.followed_id).desc()) \
             .group_by(User.id) \
             .all()
 

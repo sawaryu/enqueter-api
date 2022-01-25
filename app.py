@@ -8,12 +8,14 @@ from flask_migrate import Migrate
 
 from api.auth.admin import admin_ns
 from api.auth.auth import auth_ns
-from api.model.models import db, User, TokenBlocklist
+from api.model.models import TokenBlocklist
+from api.model.user import User
 import config
 from api.notifications import notification_ns
 from api.questions import question_ns
 from api.upload import upload_ns
 from api.users import user_ns
+from database import db
 
 app = Flask(__name__)
 app.config.from_object(config.config[os.getenv('FLASK_CONFIGURATION', 'develop')])

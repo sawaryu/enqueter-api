@@ -12,7 +12,7 @@ from flask import request
 from flask_jwt_extended import jwt_required, current_user
 from flask_restx import Namespace, Resource
 
-from api.model.models import db
+from database import db
 
 upload_ns = Namespace('/upload', description="masked(can`t open)")
 

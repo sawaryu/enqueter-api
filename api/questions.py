@@ -6,7 +6,9 @@ from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
 from api.model.enums import AnswerResultPoint
-from api.model.models import Question, db, User, answer, Notification
+from api.model.models import Question, answer, Notification
+from api.model.user import User
+from database import db
 
 question_ns = Namespace('/questions')
 
@@ -110,7 +112,7 @@ class QuestionsAnswer(Resource):
         if not question.is_open():
             return {"status": 409, "message": "The questions had been closed already."}, 409
 
-        if question.user_id == current_user.id  or current_user.is_answered_question(question):
+        if question.user_id == current_user.id or current_user.is_answered_question(question):
             return {"status": 400, "message": "Bad request"}, 400
 
         # attention that below method is the 'Dynamic'. So it should be got by the 'all()' method finally.
