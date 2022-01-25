@@ -3,8 +3,9 @@ from datetime import datetime, timedelta
 from faker import Faker
 from werkzeug.security import generate_password_hash
 
-from api.model.enums import UserRole
-from api.model.models import Confirmation, Question
+from api.model.confirmation import Confirmation
+from api.model.enum.enums import UserRole
+from api.model.models import Question
 from api.model.user import User
 from random import randrange
 from app import app

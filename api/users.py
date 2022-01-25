@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, current_user
 from flask_restx import Resource, Namespace, fields
 from sqlalchemy import func
 
-from api.model.enums import NotificationCategory
+from api.model.enum.enums import NotificationCategory
 from api.model.models import SearchHistory, Question, bookmark, answer, Notification, user_relationship
 from api.model.user import User
 from database import db

@@ -15,7 +15,9 @@ from flask_jwt_extended import (
 )
 from flask_restx import Resource, fields, Namespace
 from werkzeug.security import check_password_hash, generate_password_hash
-from api.model.models import TokenBlocklist, Confirmation, UpdateConfirmation
+
+from api.model.confirmation import Confirmation, UpdateConfirmation
+from api.model.models import TokenBlocklist
 from api.model.user import User
 from api.upload import client
 from api.libs.mailgun import MailGunException

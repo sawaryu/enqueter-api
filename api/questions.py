@@ -5,7 +5,7 @@ from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
-from api.model.enums import AnswerResultPoint
+from api.model.enum.enums import AnswerResultPoint
 from api.model.models import Question, answer, Notification
 from api.model.user import User
 from database import db

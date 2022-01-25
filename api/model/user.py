@@ -4,9 +4,10 @@ from flask import Response, render_template
 from flask_jwt_extended import current_user
 from sqlalchemy import String, Integer, Column, DateTime, Enum
 from api.libs.mailgun import MailGun
+from api.model.confirmation import Confirmation, UpdateConfirmation
 
-from api.model.enums import UserRole, NotificationCategory
-from api.model.models import Notification, Confirmation, UpdateConfirmation, bookmark, answer, \
+from api.model.enum.enums import UserRole, NotificationCategory
+from api.model.models import Notification, bookmark, answer, \
     user_relationship
 from database import db
 
