@@ -14,11 +14,17 @@ from database import db
 
 class User(db.Model):
 
+    # basic
     id = Column(Integer, primary_key=True)
     username = Column(String(15), nullable=False, unique=True)
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
 
+    # password reset
+    # reset_digest = Column(String(255), default=None)
+    # reset_expired_at = Column(Integer, default=None)
+
+    # others
     nickname = Column(String(20), nullable=False)
     nickname_replaced = Column(String(20), nullable=False)
     introduce = Column(String(140), nullable=False, default="")

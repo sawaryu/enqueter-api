@@ -1,7 +1,8 @@
 from datetime import datetime
+from time import time
+
 from flask_jwt_extended import current_user
 from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean, Enum
-from datetime import timedelta
 
 from api.model.enum.enums import NotificationCategory
 from database import db
@@ -42,9 +43,14 @@ class Question(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     content = Column(String(140), nullable=False)
-    closed_at = Column(DateTime, nullable=False, default=(datetime.now() + timedelta(weeks=1)))
+    closed_at = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
-    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+
+    def __init__(self, user_id: int, content: str, **kwargs):
+        super().__init__(**kwargs)
+        self.user_id = user_id
+        self.content = content
+        self.closed_at = int(time()) + 604800  # 1 week
 
     answered_users = db.relationship(
         'User',
@@ -57,7 +63,7 @@ class Question(db.Model):
     # if the question has been created at before more than a week, it is treated as 'closed' question.
     @property
     def is_open(self) -> bool:
-        return datetime.now() < self.closed_at
+        return time() < self.closed_at
 
     # whether current_user bookmarked the question.
     @property
@@ -82,7 +88,6 @@ class Question(db.Model):
             "content": self.content,
             "closed_at": str(self.closed_at),
             "created_at": str(self.created_at),
-            "updated_at": str(self.updated_at),
             "is_open": self.is_open,
             "is_answered": self.is_answered,
             "is_bookmarked": self.is_bookmarked

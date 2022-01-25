@@ -8,6 +8,7 @@ CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
 
 
 class UpdateConfirmation(db.Model):
+    """Update E-mail"""
     id = Column(String(50), primary_key=True)
     expire_at = Column(Integer, nullable=False)
     email = Column(String(255), nullable=False)
@@ -35,6 +36,7 @@ class UpdateConfirmation(db.Model):
 
 
 class Confirmation(db.Model):
+    """User confirmation with E-mail"""
     id = Column(String(50), primary_key=True)
     expire_at = Column(Integer, nullable=False)
     confirmed = Column(Boolean, nullable=False, default=False)

@@ -53,8 +53,8 @@ updatePassword = auth_ns.model('AuthUpdatePassword', {
     'new_password': fields.String(pattern=password_regex, required=True)
 })
 
-updateConfirmation = auth_ns.model('AuthUpdateConfirmation', {
-    'email': fields.String(pattern=email_regex, required=True)
+emailModel = auth_ns.model('AuthEmail', {
+    'email': fields.String(pattern=email_regex, max_length=255, required=True)
 })
 
 updateConfirmationConfirm = auth_ns.model('AuthUpdateConfirmationConfirm', {
@@ -215,7 +215,6 @@ class AuthLogout(Resource):
 
 @auth_ns.route('/password')
 class AuthPassword(Resource):
-
     @auth_ns.doc(
         security='jwt_auth',
         description='Update Password.',
@@ -236,6 +235,20 @@ class AuthPassword(Resource):
             "status": 200,
             "message": "The password was successfully updated."
         }
+
+
+@auth_ns.route('/password/reset')
+class AuthPasswordReset(Resource):
+    @auth_ns.doc(
+        description='Send password reset email.',
+        body=emailModel
+    )
+    def post(self):
+        email = request.json["email"]
+        if not User.query.filter_by(email=email).first():
+            return {"message": "An email is not registered."}, 400
+
+        return None
 
 
 @auth_ns.route('/refresh')
@@ -336,7 +349,7 @@ class AuthUpdateConfirmation(Resource):
     @auth_ns.doc(
         security='jwt_auth',
         description='Send email with token to new E-mail.',
-        body=updateConfirmation
+        body=emailModel
     )
     @jwt_required()
     def post(self):
