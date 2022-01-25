@@ -223,7 +223,7 @@ class UsersSearch(Resource):
         users_objects = db.session.query(User, func.count(user_relationship.c.followed_id).label("follower_count")) \
             .outerjoin(user_relationship, user_relationship.c.followed_id == User.id) \
             .filter(User.id != current_user.id) \
-            .filter((User.public_id + User.name_replaced).like(search)) \
+            .filter((User.username + User.nickname_replaced).like(search)) \
             .order_by(func.count(user_relationship.c.followed_id).desc()) \
             .group_by(User.id) \
             .all()

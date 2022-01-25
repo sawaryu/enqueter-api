@@ -1,4 +1,4 @@
 from flask_sqlalchemy import SQLAlchemy
 
-"""common db entity."""
+"""global db entity."""
 db = SQLAlchemy()

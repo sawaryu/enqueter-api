@@ -13,12 +13,14 @@ from database import db
 
 
 class User(db.Model):
+
     id = Column(Integer, primary_key=True)
-    public_id = Column(String(15), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
+    username = Column(String(15), nullable=False, unique=True)
     email = Column(String(255), nullable=False, unique=True)
-    name = Column(String(20), nullable=False)
-    name_replaced = Column(String(20), nullable=False)
+    password = Column(String(255), nullable=False)
+
+    nickname = Column(String(20), nullable=False)
+    nickname_replaced = Column(String(20), nullable=False)
     introduce = Column(String(140), nullable=False, default="")
     avatar = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.user)
@@ -94,9 +96,9 @@ class User(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
-            "public_id": self.public_id,
+            "username": self.username,
             "email": self.email,
-            "name": self.name,
+            "nickname": self.nickname,
             "introduce": self.introduce,
             "avatar": self.avatar,
             "created_at": str(self.created_at),
@@ -116,8 +118,8 @@ class User(db.Model):
         link = os.getenv("FRONT_WELCOME_URL") + f"?=confirm={self.most_recent_confirmation.id}"
         subject = "Registration confirmation"
         # for medias not compatible with html.
-        text = f"Hi,{self.name}. Please click the link to confirm your account {link}"
-        html = render_template("confirm.html", name=self.name, link=link)
+        text = f"Hi,{self.nickname}. Please click the link to confirm your account {link}"
+        html = render_template("confirm.html", name=self.nickname, link=link)
         return MailGun.send_email([self.email], subject, text, html)
 
     @property
@@ -128,8 +130,8 @@ class User(db.Model):
         update_confirmation = self.most_recent_update_confirmation
         subject = "Update E-mail."
         token = update_confirmation.id
-        text = f"Hi,{self.name}. Please enter the token to Enqueter for confirming the new E-mail. token: {token}"
-        html = render_template("confirm_update.html", name=self.name, token=token)
+        text = f"Hi,{self.nickname}. Please enter the token to Enqueter for confirming the new E-mail. token: {token}"
+        html = render_template("confirm_update.html", name=self.nickname, token=token)
         return MailGun.send_email([update_confirmation.email], subject, text, html)
 
     # relationship

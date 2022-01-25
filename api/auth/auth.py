@@ -25,25 +25,26 @@ from database import db
 
 auth_ns = Namespace('/auth')
 
-public_id_regex = r'\A[a-z\d]{1,15}\Z(?i)'
+username_regex = r'\A[a-z\d]{1,15}\Z(?i)'
+nickname_regex = r'\S'
 email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
 password_regex = r'\A[a-z\d]{8,72}\Z(?i)'
 
 signup = auth_ns.model('AuthSignup', {
-    'public_id': fields.String(pattern=public_id_regex, required=True),
+    'username': fields.String(pattern=username_regex, required=True),
     'email': fields.String(pattern=email_regex, required=True),
-    'name': fields.String(min_length=1, max_length=20, required=True),
+    'nickname': fields.String(min_length=1, max_length=20, pattern=nickname_regex, required=True),
     'password': fields.String(pattern=password_regex, required=True)
 })
 
 login = auth_ns.model('AuthLogin', {
-    'public_id_or_email': fields.String(required=True),
+    'username_or_email': fields.String(required=True),
     'password': fields.String(required=True),
 })
 
 update = auth_ns.model('AuthUpdate', {
-    'public_id': fields.String(pattern=public_id_regex, required=True),
-    'name': fields.String(min_length=1, max_length=20, pattern=r'\S', required=True),
+    'username': fields.String(pattern=username_regex, required=True),
+    'nickname': fields.String(min_length=1, max_length=20, pattern=nickname_regex, required=True),
     'introduce': fields.String(max_length=140, required=True)
 })
 
@@ -70,7 +71,7 @@ class AuthBasic(Resource):
     def post(self):
         params = request.json
 
-        if User.query.filter_by(public_id=params['public_id']).one_or_none():
+        if User.query.filter_by(username=params['username']).one_or_none():
             return {"status": 400, "message": "user_id is already used."}, 400
 
         if User.query.filter_by(email=params['email']).one_or_none():
@@ -78,10 +79,10 @@ class AuthBasic(Resource):
 
         hashed_password = generate_password_hash(params['password'], method='sha256')
         user = User(
-            public_id=params['public_id'],
+            username=params['username'],
             email=params["email"],
-            name=params['name'],
-            name_replaced=params['name'].replace(' ', '').replace('　', ''),
+            nickname=params['nickname'],
+            nickname_replaced=params['name'].replace(' ', '').replace('　', ''),
             avatar=f'egg_{randrange(1, 11)}.png',
             password=hashed_password
         )
@@ -150,16 +151,16 @@ class AuthBasic(Resource):
     def put(self):
         params = request.json
 
-        if not current_user.public_id == params['public_id'] \
-                and User.query.filter_by(public_id=params['public_id']).one_or_none():
+        if not current_user.username == params['username'] \
+                and User.query.filter_by(username=params['username']).one_or_none():
             return {
                        'status': 400,
-                       'message': 'the user id has been already used.'
+                       'message': 'the username has been already used.'
                    }, 400
 
-        current_user.public_id = params['public_id']
-        current_user.name = params['name']
-        current_user.name_replaced = params['name'].replace(' ', '').replace('　', '')
+        current_user.username = params['username']
+        current_user.nickname = params['nickname']
+        current_user.nickname_replaced = params['nickname'].replace(' ', '').replace('　', '')
         current_user.introduce = params['introduce']
         db.session.commit()
 
@@ -177,11 +178,11 @@ class AuthLogin(Resource):
     )
     def post(self):
         params = request.json
-        identify = params['public_id_or_email']
+        identify = params['username_or_email']
 
         user = None
-        if re.fullmatch(public_id_regex, identify):
-            user = User.query.filter_by(public_id=identify).one_or_none()
+        if re.fullmatch(username_regex, identify):
+            user = User.query.filter_by(username=identify).one_or_none()
         elif re.fullmatch(email_regex, identify):
             user = User.query.filter_by(email=identify).one_or_none()
 
@@ -262,11 +263,11 @@ class ProtectedApi(Resource):
         # TODO: review current_user information.
         return jsonify(
             id=current_user.id,
-            public_id=current_user.public_id,
+            username=current_user.username,
             email=current_user.email,
             avatar=current_user.avatar,
             introduce=current_user.introduce,
-            name=current_user.name,
+            nickname=current_user.nickname,
             role=current_user.role,
             created_at=current_user.created_at,
             updated_at=current_user.updated_at
@@ -326,29 +327,6 @@ class AuthConfirmResent(Resource):
         except:
             traceback.print_exc()
             return {"message": "Internal server error. Failed to resend the email."}, 500
-
-    # """For testing"""
-    # @auth_ns.doc(
-    #     security='jwt_auth',
-    #     description='Confirmation testing (* should not be open to public.)'
-    # )
-    # @jwt_required()
-    # def get(self, user_id):
-    #     user = User.query.filter_by(id=user_id).first()
-    #     if not user:
-    #         return {"message": "Not found the resource you want."}, 404
-    #
-    #     objects = user.confirmations.order_by(Confirmation.expire_at).all()
-    #
-    #     # dump with scratch.
-    #     confirmations = list(map(lambda x: x.to_dict(), objects))
-    #
-    #     return (
-    #         {
-    #             "current_time": int(time()),
-    #             "confirmation": confirmations
-    #         }
-    #     )
 
 
 @auth_ns.route('/update_confirmation')

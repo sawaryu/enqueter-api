@@ -29,14 +29,14 @@ def main():
         for n in range(1, 11):
             n = str(n)
             # continue while faker_name > 20;
-            name = ""
-            while not name:
+            nickname = ""
+            while not nickname:
                 faker_name = faker_gen.name()
                 if len(faker_name) <= 20:
-                    name = faker_name
+                    nickname = faker_name
                     break
-            name_replaced = name.replace(' ', '').replace('　', '')
-            public_id = f'sample{n + n}'
+            nickname_replaced = nickname.replace(' ', '').replace('　', '')
+            username = f'sample{n + n}'
             email = f"sample{n}@sample.com"
             password = 'passpass'
             avatar = f'egg_{randrange(1, 11)}.png'
@@ -44,10 +44,10 @@ def main():
             role = UserRole.admin if n == "1" else UserRole.user
 
             new_user = User(
-                name=name,
-                name_replaced=name_replaced,
-                public_id=public_id,
+                username=username,
                 email=email,
+                nickname=nickname,
+                nickname_replaced=nickname_replaced,
                 password=generate_password_hash(password, method='sha256'),
                 avatar=avatar,
                 introduce=introduce,
