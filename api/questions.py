@@ -109,7 +109,7 @@ class QuestionsAnswer(Resource):
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
 
-        if not question.is_open():
+        if not question.is_open:
             return {"status": 409, "message": "The questions had been closed already."}, 409
 
         if question.user_id == current_user.id or current_user.is_answered_question(question):
@@ -194,7 +194,7 @@ class QuestionOwner(Resource):
         question = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
-        elif question.is_open() and not question.user_id == current_user.id \
+        elif question.is_open and not question.user_id == current_user.id \
                 and not current_user.is_answered_question(question):
             return {"status": 403, "message": "Forbidden"}, 403
 

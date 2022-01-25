@@ -82,7 +82,7 @@ class AuthBasic(Resource):
             username=params['username'],
             email=params["email"],
             nickname=params['nickname'],
-            nickname_replaced=params['name'].replace(' ', '').replace('　', ''),
+            nickname_replaced=params['nickname'].replace(' ', '').replace('　', ''),
             avatar=f'egg_{randrange(1, 11)}.png',
             password=hashed_password
         )
