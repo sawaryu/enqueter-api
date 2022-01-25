@@ -27,71 +27,6 @@ class User(db.Model):
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
-    confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
-    update_confirmations = db.relationship('UpdateConfirmation', backref='user', lazy="dynamic",
-                                           cascade='all, delete-orphan')
-
-    questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
-                                cascade='all, delete-orphan')
-
-    answered_questions = db.relationship(
-        'Question',
-        order_by="desc(answer.c.created_at)",
-        secondary=answer,
-        back_populates="answered_users",
-        lazy="dynamic"
-    )
-
-    bookmarks = db.relationship(
-        'Question',
-        order_by="desc(bookmark.c.created_at)",
-        secondary=bookmark,
-        backref="bookmarked_users",
-        lazy="dynamic"
-    )
-
-    follower = db.relationship(
-        'User', secondary='user_relationship',
-        primaryjoin=(user_relationship.c.followed_id == id),
-        secondaryjoin=(user_relationship.c.following_id == id),
-        order_by="desc(user_relationship.c.created_at)",
-        back_populates='followings')
-
-    followings = db.relationship(
-        'User', secondary='user_relationship',
-        primaryjoin=(user_relationship.c.following_id == id),
-        secondaryjoin=(user_relationship.c.followed_id == id),
-        order_by="desc(user_relationship.c.created_at)",
-        back_populates='follower')
-
-    histories = db.relationship(
-        'SearchHistory',
-        primaryjoin='SearchHistory.user_id==User.id',
-        order_by="desc(SearchHistory.created_at)", lazy=True, cascade='all, delete-orphan',
-        back_populates='from_user'
-    )
-
-    histories_passive = db.relationship(
-        'SearchHistory',
-        primaryjoin='SearchHistory.target_id==User.id',
-        order_by="desc(SearchHistory.created_at)", lazy=True, cascade='all, delete-orphan',
-        back_populates='target_user'
-    )
-
-    passive_notifications = db.relationship(
-        'Notification',
-        primaryjoin='Notification.passive_id==User.id',
-        order_by="desc(Notification.created_at)", lazy=True, cascade='all, delete-orphan',
-        back_populates='passive_user'
-    )
-
-    active_notifications = db.relationship(
-        'Notification',
-        primaryjoin='Notification.active_id==User.id',
-        order_by="desc(Notification.created_at)", lazy=True, cascade='all, delete-orphan',
-        back_populates='active_user'
-    )
-
     # json
     def to_dict(self):
         return {
@@ -106,6 +41,62 @@ class User(db.Model):
             "is_following": True if current_user.is_following(self) else False,
             "role": self.role
         }
+
+    confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
+    update_confirmations = db.relationship('UpdateConfirmation', backref='user', lazy="dynamic",
+                                           cascade='all, delete-orphan')
+    questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
+                                cascade='all, delete-orphan')
+    answered_questions = db.relationship(
+        'Question',
+        order_by="desc(answer.c.created_at)",
+        secondary=answer,
+        back_populates="answered_users",
+        lazy="dynamic"
+    )
+    bookmarks = db.relationship(
+        'Question',
+        order_by="desc(bookmark.c.created_at)",
+        secondary=bookmark,
+        backref="bookmarked_users",
+        lazy="dynamic"
+    )
+    follower = db.relationship(
+        'User', secondary='user_relationship',
+        primaryjoin=(user_relationship.c.followed_id == id),
+        secondaryjoin=(user_relationship.c.following_id == id),
+        order_by="desc(user_relationship.c.created_at)",
+        back_populates='followings')
+    followings = db.relationship(
+        'User', secondary='user_relationship',
+        primaryjoin=(user_relationship.c.following_id == id),
+        secondaryjoin=(user_relationship.c.followed_id == id),
+        order_by="desc(user_relationship.c.created_at)",
+        back_populates='follower')
+    histories = db.relationship(
+        'SearchHistory',
+        primaryjoin='SearchHistory.user_id==User.id',
+        order_by="desc(SearchHistory.created_at)", lazy=True, cascade='all, delete-orphan',
+        back_populates='from_user'
+    )
+    histories_passive = db.relationship(
+        'SearchHistory',
+        primaryjoin='SearchHistory.target_id==User.id',
+        order_by="desc(SearchHistory.created_at)", lazy=True, cascade='all, delete-orphan',
+        back_populates='target_user'
+    )
+    passive_notifications = db.relationship(
+        'Notification',
+        primaryjoin='Notification.passive_id==User.id',
+        order_by="desc(Notification.created_at)", lazy=True, cascade='all, delete-orphan',
+        back_populates='passive_user'
+    )
+    active_notifications = db.relationship(
+        'Notification',
+        primaryjoin='Notification.active_id==User.id',
+        order_by="desc(Notification.created_at)", lazy=True, cascade='all, delete-orphan',
+        back_populates='active_user'
+    )
 
     @property
     def most_recent_confirmation(self) -> Confirmation:
@@ -181,7 +172,7 @@ class User(db.Model):
                 question_id=question.id
             ))
 
-    def is_same_notification(self, user_id, category, question_id=None):
+    def is_same_notification(self, user_id, category, question_id=None) -> list:
         # in case of 'follow'
         if category == NotificationCategory.follow:
             return list(
