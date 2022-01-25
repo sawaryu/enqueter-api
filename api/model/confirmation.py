@@ -25,6 +25,14 @@ class UpdateConfirmation(db.Model):
     def find_by_if(cls, _id) -> "UpdateConfirmation":
         return cls.query.filter_by(id=_id).first()
 
+    def save_to_db(self) -> None:
+        db.session.add(self)
+        db.session.commit()
+
+    def delete_from_db(self) -> None:
+        db.session.delete(self)
+        db.session.commit()
+
     @property
     def is_expired(self) -> bool:
         return time() > self.expire_at
@@ -52,6 +60,14 @@ class Confirmation(db.Model):
     @classmethod
     def find_by_if(cls, _id) -> "Confirmation":
         return cls.query.filter_by(id=_id).first()
+
+    def save_to_db(self) -> None:
+        db.session.add(self)
+        db.session.commit()
+
+    def delete_from_db(self) -> None:
+        db.session.delete(self)
+        db.session.commit()
 
     # treat as like property. not using bracket when calling.
     # "time()" is the UNIX elapsed time.

@@ -1,8 +1,12 @@
 import os
 from datetime import datetime
+from random import randrange
+
 from flask import Response, render_template
 from flask_jwt_extended import current_user
 from sqlalchemy import String, Integer, Column, DateTime, Enum
+from werkzeug.security import generate_password_hash
+
 from api.libs.mailgun import MailGun
 from api.model.confirmation import Confirmation, UpdateConfirmation
 
@@ -13,12 +17,12 @@ from database import db
 
 
 class User(db.Model):
-
     # basic
     id = Column(Integer, primary_key=True)
     username = Column(String(15), nullable=False, unique=True)
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.user)
 
     # password reset
     # reset_digest = Column(String(255), default=None)
@@ -28,12 +32,18 @@ class User(db.Model):
     nickname = Column(String(20), nullable=False)
     nickname_replaced = Column(String(20), nullable=False)
     introduce = Column(String(140), nullable=False, default="")
-    avatar = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), nullable=False, default=UserRole.user)
+    avatar = Column(String(255), nullable=False, default=f"egg_{randrange(1, 11)}.png'")
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
-    # json
+    def __init__(self, username: str, email: str, nickname: str, password: str, **kwargs):
+        super().__init__(**kwargs)
+        self.username = username
+        self.email = email
+        self.password = generate_password_hash(password, method='sha256')
+        self.nickname = nickname
+        self.nickname_replaced = nickname.replace(' ', '').replace('　', '')
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -103,6 +113,14 @@ class User(db.Model):
         order_by="desc(Notification.created_at)", lazy=True, cascade='all, delete-orphan',
         back_populates='active_user'
     )
+
+    def save_to_db(self) -> None:
+        db.session.add(self)
+        db.session.commit()
+
+    def delete_from_db(self) -> None:
+        db.session.delete(self)
+        db.session.commit()
 
     @property
     def most_recent_confirmation(self) -> Confirmation:

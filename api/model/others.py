@@ -60,6 +60,14 @@ class Question(db.Model):
         lazy="dynamic"
     )
 
+    def save_to_db(self) -> None:
+        db.session.add(self)
+        db.session.commit()
+
+    def delete_from_db(self) -> None:
+        db.session.delete(self)
+        db.session.commit()
+
     # if the question has been created at before more than a week, it is treated as 'closed' question.
     @property
     def is_open(self) -> bool:

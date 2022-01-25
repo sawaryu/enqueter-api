@@ -3,7 +3,6 @@ import os
 import re
 import traceback
 from datetime import datetime, timezone
-from random import randrange
 
 from flask import request, jsonify
 from flask_jwt_extended import (
@@ -72,45 +71,31 @@ class AuthBasic(Resource):
         params = request.json
 
         if User.query.filter_by(username=params['username']).one_or_none():
-            return {"status": 400, "message": "user_id is already used."}, 400
+            return {"message": "user_id is already used."}, 400
 
         if User.query.filter_by(email=params['email']).one_or_none():
-            return {"status": 400, "message": "Email is already used."}, 400
+            return {"message": "Email is already used."}, 400
 
-        hashed_password = generate_password_hash(params['password'], method='sha256')
         user = User(
             username=params['username'],
             email=params["email"],
-            nickname=params['nickname'],
-            nickname_replaced=params['nickname'].replace(' ', '').replace('　', ''),
-            avatar=f'egg_{randrange(1, 11)}.png',
-            password=hashed_password
+            password=params["password"],
+            nickname=params["nickname"]
         )
 
         try:
-            # create user
-            db.session.add(user)
-            db.session.commit()
-
-            # create confirmation
+            user.save_to_db()
             confirmation = Confirmation(user.id)
-            db.session.add(confirmation)
-            db.session.commit()
-
-            # send an email with confirmation link
+            confirmation.save_to_db()
             user.send_confirmation_email()
-            return {"status": 201, 'message': 'Account created successfully. an email with activation link '
-                                              'has been sent to your email address, please check.'}, 201
+            return {'message': 'Account created successfully. '
+                               'an email with activation link has been sent to your email address, please check.'}, 201
         except MailGunException as e:
-            # delete the user if any error happen.
-            db.session.delete(user)
-            db.session.commit()
+            user.delete_from_db()
             return {"message": str(e)}, 400
         except:
-            # delete the user if any error happen.
             traceback.print_exc()
-            db.session.delete(user)
-            db.session.commit()
+            user.delete_from_db()
             return {"message": "Internal server error. Failed to create user."}, 500
 
     @auth_ns.doc(
@@ -127,20 +112,14 @@ class AuthBasic(Resource):
                 Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
             )
 
-        # delete the current_user
+        # delete the current_user and revoke jwt.
         db.session.delete(current_user)
-
-        # current_user's jwt go to block lists.
         jti = get_jwt()["jti"]
         now = datetime.now(timezone.utc)
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
-
         db.session.commit()
 
-        return {
-            'status': 200,
-            'message': 'the user was successfully deleted. And token revoked'
-        }
+        return {'message': 'the user was successfully deleted. And token revoked'}, 200
 
     @auth_ns.doc(
         security='jwt_auth',
@@ -150,13 +129,8 @@ class AuthBasic(Resource):
     @jwt_required()
     def put(self):
         params = request.json
-
-        if not current_user.username == params['username'] \
-                and User.query.filter_by(username=params['username']).one_or_none():
-            return {
-                       'status': 400,
-                       'message': 'the username has been already used.'
-                   }, 400
+        if User.query.filter_by(username=params['username']).one_or_none():
+            return {'message': 'the username has been already used.'}, 400
 
         current_user.username = params['username']
         current_user.nickname = params['nickname']
@@ -164,10 +138,7 @@ class AuthBasic(Resource):
         current_user.introduce = params['introduce']
         db.session.commit()
 
-        return {
-                   'status': 201,
-                   'message': 'the user was successfully updated.'
-               }, 201
+        return {'message': 'the user was successfully updated.'}, 201
 
 
 @auth_ns.route('/login')
@@ -194,8 +165,8 @@ class AuthLogin(Resource):
                 return jsonify(access_token=access_token, refresh_token=refresh_token)
             return {"message": "You have not confirmed registration.", "user_id_not_confirmed": user.id}, 400
 
-        return {"status": 401, "message": "Incorrect Username (E-mail) or Password.",
-                "user_id_not_confirmed": None}, http.HTTPStatus.UNAUTHORIZED
+        return {"message": "Incorrect Username (E-mail) or Password.",
+                "user_id_not_confirmed": None}, 401
 
 
 @auth_ns.route('/logout')
@@ -224,17 +195,11 @@ class AuthPassword(Resource):
     def put(self):
         params = request.json
         if not check_password_hash(current_user.password, params['current_password']):
-            return {
-                       "status": 401,
-                       "message": "Incorrect current password"
-                   }, http.HTTPStatus.UNAUTHORIZED
+            return {"message": "Incorrect current password"}, 401
 
         current_user.password = generate_password_hash(params['new_password'], method='sha256')
         db.session.commit()
-        return {
-            "status": 200,
-            "message": "The password was successfully updated."
-        }
+        return {"message": "The password was successfully updated."}, 200
 
 
 @auth_ns.route('/password/reset')
@@ -354,7 +319,7 @@ class AuthUpdateConfirmation(Resource):
     @jwt_required()
     def post(self):
         if User.query.filter_by(email=request.json["email"]).first():
-            return {"status": 400, "message": "E-mail is already used."}, 400
+            return {"message": "E-mail is already used."}, 400
 
         try:
             old_update_confirmation = current_user.most_recent_update_confirmation
@@ -364,8 +329,8 @@ class AuthUpdateConfirmation(Resource):
             db.session.add(new_update_confirmation)
             db.session.commit()
             current_user.send_update_confirmation_email()
-            return {"status": 201, 'message': 'An email with token '
-                                              'has been sent to your email address, please check.'}, 201
+            return {'message': 'An email with token '
+                               'has been sent to your email address, please check.'}, 201
         except MailGunException as e:
             return {"message": str(e)}, 400
         except:
@@ -392,7 +357,7 @@ class AuthUpdateConfirmation(Resource):
 
         # if the email is used while process of updating.
         if User.query.filter_by(email=update_confirmation.email).first():
-            return {"status": 400, "message": "Sorry, E-mail is already used by someone."}, 400
+            return {"message": "Sorry, E-mail is already used by someone."}, 400
 
         current_user.email = update_confirmation.email
         update_confirmation.force_to_expire()
