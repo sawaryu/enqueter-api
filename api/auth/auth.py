@@ -1,8 +1,8 @@
-import http
 import os
 import re
 import traceback
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from flask import request, jsonify
 from flask_jwt_extended import (
@@ -58,6 +58,11 @@ emailModel = auth_ns.model('AuthEmail', {
 
 updateConfirmationConfirm = auth_ns.model('AuthUpdateConfirmationConfirm', {
     'token': fields.String(required=True, max_length=50)
+})
+
+resetPassword = auth_ns.model('AuthResetPassword', {
+    'user_id': fields.Integer(required=True),
+    'password': fields.String(pattern=password_regex, required=True)
 })
 
 
@@ -202,18 +207,58 @@ class AuthPassword(Resource):
         return {"message": "The password was successfully updated."}, 200
 
 
-@auth_ns.route('/password/reset')
+# TODO: send email.
+@auth_ns.route('/password_reset')
 class AuthPasswordReset(Resource):
     @auth_ns.doc(
         description='Send password reset email.',
         body=emailModel
     )
     def post(self):
-        email = request.json["email"]
-        if not User.query.filter_by(email=email).first():
+        user = User.find_by_email(request.json["email"])
+        if not user:
             return {"message": "An email is not registered."}, 400
 
-        return None
+        token = uuid4().hex
+        user.create_reset_password_resource(token)
+
+        # send mail with link
+        # ex: link = "http://localhost:3000/sdkhdkh387e8jey26e868/password_reset/?email=oretekioreteki%40gmail.com"
+
+        return {"message": "an email with link has been sent to your email address, please check."}
+
+    @auth_ns.doc(
+        description='Check the link is valid. (* very important.)',
+        params={'token': {'type': 'str', 'required': True}, 'email': {'type': 'str', 'required': True}}
+    )
+    def get(self):
+        token = request.args.get("token")
+        email = request.args.get("email")
+        user = User.find_by_email(email)
+        if not user or not check_password_hash(token, user.reset_digest):
+            return {"message": "Invalid operation."}, 404
+        elif user.is_reset_expired:
+            return {"message": "The link was expired. please start over."}, 400
+
+        return {"message": "The link are valid. please update the password.", "user_id": user.id}, 200
+
+    @auth_ns.doc(
+        description='Actually update password.',
+        body=resetPassword
+    )
+    def put(self):
+        user_id = request.json["user_id"]
+        password = request.json["password"]
+        user = User.find_by_id(user_id)
+        if not user:
+            return {"message": "Invalid operation."}, 404
+        elif user.is_reset_expired:
+            return {"message": "The link was expired. please start over."}, 400
+
+        user.password = generate_password_hash(password, method='sha256')
+        db.session.commit()
+
+        return {"message": "Reset a password successfully."}, 200
 
 
 @auth_ns.route('/refresh')
@@ -238,7 +283,6 @@ class ProtectedApi(Resource):
     )
     @jwt_required()
     def get(self):
-        # TODO: review current_user information.
         return jsonify(
             id=current_user.id,
             username=current_user.username,
@@ -279,7 +323,6 @@ class AuthConfirm(Resource):
 @auth_ns.route('/<int:user_id>/confirm/resend')
 class AuthConfirmResent(Resource):
     """Resend the confirmation link"""
-
     @auth_ns.doc(
         description='Resend confirmation email.'
     )

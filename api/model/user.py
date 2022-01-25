@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from random import randrange
+from time import time
 
 from flask import Response, render_template
 from flask_jwt_extended import current_user
@@ -15,6 +16,8 @@ from api.model.others import Notification, bookmark, answer, \
     user_relationship
 from database import db
 
+CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
+
 
 class User(db.Model):
     # basic
@@ -25,8 +28,8 @@ class User(db.Model):
     role = Column(Enum(UserRole), nullable=False, default=UserRole.user)
 
     # password reset
-    # reset_digest = Column(String(255), default=None)
-    # reset_expired_at = Column(Integer, default=None)
+    reset_digest = Column(String(255), default=None)
+    reset_expired_at = Column(Integer, default=None)
 
     # others
     nickname = Column(String(20), nullable=False)
@@ -44,7 +47,7 @@ class User(db.Model):
         self.nickname = nickname
         self.nickname_replaced = nickname.replace(' ', '').replace('　', '')
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             "id": self.id,
             "username": self.username,
@@ -114,12 +117,29 @@ class User(db.Model):
         back_populates='active_user'
     )
 
+    @classmethod
+    def find_by_id(cls, _id: int) -> "User":
+        return cls.query.filter_by(id=_id).first()
+
+    @classmethod
+    def find_by_email(cls, email: str) -> "User":
+        return cls.query.filter_by(email=email).first()
+
     def save_to_db(self) -> None:
         db.session.add(self)
         db.session.commit()
 
     def delete_from_db(self) -> None:
         db.session.delete(self)
+        db.session.commit()
+
+    @property
+    def is_reset_expired(self) -> bool:
+        return time() > self.reset_expired_at
+
+    def create_reset_password_resource(self, token: str) -> None:
+        self.reset_digest = generate_password_hash(token, method='sha256')
+        self.reset_expired_at = int(time()) + CONFIRMATION_EXPIRE_DELTA
         db.session.commit()
 
     @property
@@ -150,35 +170,35 @@ class User(db.Model):
         return MailGun.send_email([update_confirmation.email], subject, text, html)
 
     # relationship
-    def follow(self, user):
+    def follow(self, user) -> None:
         if not self.is_following(user) and not self.id == user.id:
             self.followings.append(user)
 
-    def unfollow(self, user):
+    def unfollow(self, user) -> None:
         if self.is_following(user):
             self.followings.remove(user)
 
-    def is_following(self, user):
+    def is_following(self, user) -> list:
         return list(filter(lambda x: x.id == user.id, self.followings))
 
     # is already answered
-    def is_answered_question(self, question):
+    def is_answered_question(self, question) -> list:
         return list(filter(lambda x: x.id == question.id, self.answered_questions))
 
     # bookmark
-    def bookmark_question(self, question):
+    def bookmark_question(self, question) -> None:
         if not self.is_bookmark_question(question):
             self.bookmarks.append(question)
 
-    def un_bookmark_question(self, question):
+    def un_bookmark_question(self, question) -> None:
         if self.is_bookmark_question(question):
             self.bookmarks.remove(question)
 
-    def is_bookmark_question(self, question):
+    def is_bookmark_question(self, question) -> list:
         return list(filter(lambda x: x.id == question.id, self.bookmarks))
 
     # notification
-    def create_follow_notification(self, user):
+    def create_follow_notification(self, user) -> None:
         if not self.is_same_notification(user.id, NotificationCategory.follow) and not self.id == user.id:
             db.session.add(Notification(
                 passive_id=user.id,
@@ -186,7 +206,7 @@ class User(db.Model):
                 category=NotificationCategory.follow,
             ))
 
-    def create_answer_notification(self, question):
+    def create_answer_notification(self, question) -> None:
         if not self.is_same_notification(question.user_id, NotificationCategory.answer, question_id=question.id) \
                 and not self.id == question.user_id:
             db.session.add(Notification(
