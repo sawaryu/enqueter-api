@@ -15,7 +15,7 @@ from flask_jwt_extended import (
 from flask_restx import Resource, fields, Namespace
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from api.model.confirmation import Confirmation, UpdateConfirmation
+from api.model.confirmation import Confirmation, UpdateEmail
 from api.model.others import TokenBlocklist
 from api.model.user import User
 from api.upload import client
@@ -52,16 +52,16 @@ updatePassword = auth_ns.model('AuthUpdatePassword', {
     'new_password': fields.String(pattern=password_regex, required=True)
 })
 
-emailModel = auth_ns.model('AuthEmail', {
+sendEmail = auth_ns.model('AuthSendEmail', {
     'email': fields.String(pattern=email_regex, max_length=255, required=True)
 })
 
-updateConfirmationConfirm = auth_ns.model('AuthUpdateConfirmationConfirm', {
+updateEmail = auth_ns.model('AuthUpdateEmail', {
     'token': fields.String(required=True, max_length=50)
 })
 
 resetPassword = auth_ns.model('AuthResetPassword', {
-    'token': fields.String(required=True, max_length=50),
+    'token': fields.String(max_length=50, required=True),
     'email': fields.String(pattern=email_regex, max_length=255, required=True),
     'password': fields.String(pattern=password_regex, required=True)
 })
@@ -69,6 +69,8 @@ resetPassword = auth_ns.model('AuthResetPassword', {
 
 @auth_ns.route('')
 class AuthBasic(Resource):
+    """Basic auth CRUD"""
+
     @auth_ns.doc(
         description='Create new user.',
         body=signup
@@ -149,6 +151,8 @@ class AuthBasic(Resource):
 
 @auth_ns.route('/login')
 class AuthLogin(Resource):
+    """Login"""
+
     @auth_ns.doc(
         description='Login',
         body=login
@@ -177,6 +181,8 @@ class AuthLogin(Resource):
 
 @auth_ns.route('/logout')
 class AuthLogout(Resource):
+    """"Logout"""
+
     @auth_ns.doc(
         security='jwt_auth',
         description='logout and revoke jwt.',
@@ -191,7 +197,9 @@ class AuthLogout(Resource):
 
 
 @auth_ns.route('/password')
-class AuthPassword(Resource):
+class AuthPasswordUpdate(Resource):
+    """Update Password"""
+
     @auth_ns.doc(
         security='jwt_auth',
         description='Update Password.',
@@ -208,20 +216,169 @@ class AuthPassword(Resource):
         return {"message": "The password was successfully updated."}, 200
 
 
-# TODO: send email.
+@auth_ns.route('/refresh')
+class AuthRefresh(Resource):
+    """Token Refresh"""
+
+    @auth_ns.doc(
+        description='required refresh token to get new access-token',
+        security='jwt_auth',
+    )
+    @jwt_required(refresh=True)
+    def post(self):
+        access_token = create_access_token(identity=current_user)
+        return jsonify(access_token=access_token)
+
+
+# confirm you can get the current_user info
+@auth_ns.route('/protected')
+class AuthProtected(Resource):
+    """Get current user information"""
+
+    @auth_ns.doc(
+        security='jwt_auth',
+        description='required access-token to get current_user info.'
+    )
+    @jwt_required()
+    def get(self):
+        return jsonify(
+            id=current_user.id,
+            username=current_user.username,
+            email=current_user.email,
+            avatar=current_user.avatar,
+            introduce=current_user.introduce,
+            nickname=current_user.nickname,
+            role=current_user.role,
+            created_at=current_user.created_at,
+            updated_at=current_user.updated_at
+        )
+
+
+@auth_ns.route('/<string:confirmation_id>/confirm')
+class AuthConfirmation(Resource):
+    """When click the confirmation link"""
+
+    @auth_ns.doc(
+        description='Confirm the user is existing.'
+    )
+    def get(self, confirmation_id: str):
+        confirmation = Confirmation.query.filter_by(id=confirmation_id).first()
+        if not confirmation:
+            return {"message": "Not Found the resource you want."}, 404
+        if confirmation.confirmed:
+            return {"message": "You are already confirmed.", "type": "info"}, 200
+        if confirmation.is_expired:
+            return {"message": "That link is expired. If you need to resend E-mail, please login firstly.",
+                    "type": "warning"}, 200
+
+        confirmation.confirmed = True
+        db.session.commit()
+
+        # redirect to Frontend page.
+        return {"message": "You are confirmed now. please login. ", "type": "success"}, 200
+
+
+@auth_ns.route('/<int:user_id>/confirm/resend')
+class AuthConfirmationResend(Resource):
+    """Resend the confirmation email"""
+
+    @auth_ns.doc(
+        description='Resend confirmation email.'
+    )
+    def post(self, user_id):
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            return {"message": "Not found the resource you want."}, 404
+
+        try:
+            confirmation = user.most_recent_confirmation
+            if confirmation:
+                if confirmation.confirmed:
+                    return {"message": "You had been already confirmed"}
+                confirmation.force_to_expire()
+            new_confirmation = Confirmation(user_id)
+            db.session.add(new_confirmation)
+            db.session.commit()
+            user.send_confirmation_email()
+            return {"message": "E-mail confirmation successfully re-sent. please check your email"
+                               f" <{user.email}>"}
+        except MailGunException as e:
+            return {"message": str(e)}, 400
+        except:
+            traceback.print_exc()
+            return {"message": "Internal server error. Failed to resend the email."}, 500
+
+
+@auth_ns.route('/update_email')
+class AuthUpdateEmail(Resource):
+    """Update E-mail"""
+
+    @auth_ns.doc(
+        security='jwt_auth',
+        description='Send email with token to new address.',
+        body=sendEmail
+    )
+    @jwt_required()
+    def post(self):
+        if User.query.filter_by(email=request.json["email"]).first():
+            return {"message": "E-mail is already used."}, 400
+
+        try:
+            old_update_confirmation = current_user.most_recent_update_confirmation
+            if old_update_confirmation:
+                old_update_confirmation.force_to_expire()
+            new_update_confirmation = UpdateEmail(current_user.id, request.json["email"])
+            db.session.add(new_update_confirmation)
+            db.session.commit()
+            current_user.send_update_confirmation_email()
+            return {'message': 'An email with token '
+                               'has been sent to your email address, please check.'}, 201
+        except MailGunException as e:
+            return {"message": str(e)}, 400
+        except:
+            traceback.print_exc()
+            return {"message": "Internal server error. Failed to resend the email."}, 500
+
+    @auth_ns.doc(
+        security='jwt_auth',
+        description='Confirm token and update the E-mail.',
+        body=updateEmail
+    )
+    @jwt_required()
+    def put(self):
+        token = request.json["token"]
+
+        update_email = UpdateEmail.find_by_user_id_and_token(current_user.id, token)
+        if not update_email:
+            return {"message": "The token is incorrect."}, 400
+        if update_email.is_expired:
+            return {"message": "That token is expired already. please start over.",
+                    "type": "danger"}, 400
+
+        # if the email is used while process of updating.
+        if User.query.filter_by(email=update_email.email).first():
+            return {"message": "Sorry, E-mail is already used by someone."}, 400
+
+        current_user.email = update_email.email
+        update_email.force_to_expire()
+        db.session.commit()
+
+        return {"message": "Your email has been updated successfully."}, 200
+
+
 @auth_ns.route('/password_reset')
 class AuthPasswordReset(Resource):
+    """Forgot Password"""
+
     @auth_ns.doc(
         description='Send password reset email.',
-        body=emailModel
+        body=sendEmail
     )
     def post(self):
         user = User.find_by_email(request.json["email"])
         if not user:
             return {"message": "An email is not registered."}, 400
 
-        # send mail with link
-        # ex: link = "http://localhost:3000/sdkhdkh387e8jey26e868/password_reset/?email=oretekioreteki%40gmail.com"
         try:
             token = uuid4().hex
             user.create_reset_password_resource(token)
@@ -267,152 +424,3 @@ class AuthPasswordReset(Resource):
         user.force_to_expired()
 
         return {"message": "Reset a password successfully."}, 200
-
-
-@auth_ns.route('/refresh')
-class RefreshApi(Resource):
-
-    @auth_ns.doc(
-        description='required refresh token to get new access-token',
-        security='jwt_auth',
-    )
-    @jwt_required(refresh=True)
-    def post(self):
-        access_token = create_access_token(identity=current_user)
-        return jsonify(access_token=access_token)
-
-
-# confirm you can get the current_user info
-@auth_ns.route('/protected')
-class ProtectedApi(Resource):
-    @auth_ns.doc(
-        security='jwt_auth',
-        description='required access-token to get current_user info.'
-    )
-    @jwt_required()
-    def get(self):
-        return jsonify(
-            id=current_user.id,
-            username=current_user.username,
-            email=current_user.email,
-            avatar=current_user.avatar,
-            introduce=current_user.introduce,
-            nickname=current_user.nickname,
-            role=current_user.role,
-            created_at=current_user.created_at,
-            updated_at=current_user.updated_at
-        )
-
-
-@auth_ns.route('/<string:confirmation_id>/confirm')
-class AuthConfirm(Resource):
-    """When click the confirmation link"""
-
-    @auth_ns.doc(
-        description='Confirm the user is existing.'
-    )
-    def get(self, confirmation_id: str):
-        confirmation = Confirmation.query.filter_by(id=confirmation_id).first()
-        if not confirmation:
-            return {"message": "Not Found the resource you want."}, 404
-        if confirmation.confirmed:
-            return {"message": "You are already confirmed.", "type": "info"}, 200
-        if confirmation.is_expired:
-            return {"message": "That link is expired. If you need to resend E-mail, please login firstly.",
-                    "type": "warning"}, 200
-
-        confirmation.confirmed = True
-        db.session.commit()
-
-        # redirect to Frontend page.
-        return {"message": "You are confirmed now. please login. ", "type": "success"}, 200
-
-
-@auth_ns.route('/<int:user_id>/confirm/resend')
-class AuthConfirmResent(Resource):
-    """Resend the confirmation link"""
-
-    @auth_ns.doc(
-        description='Resend confirmation email.'
-    )
-    def post(self, user_id):
-        user = User.query.filter_by(id=user_id).first()
-        if not user:
-            return {"message": "Not found the resource you want."}, 404
-
-        try:
-            confirmation = user.most_recent_confirmation
-            if confirmation:
-                if confirmation.confirmed:
-                    return {"message": "You had been already confirmed"}
-                confirmation.force_to_expire()
-            new_confirmation = Confirmation(user_id)
-            db.session.add(new_confirmation)
-            db.session.commit()
-            user.send_confirmation_email()
-            return {"message": "E-mail confirmation successfully re-sent. please check your email"
-                               f" <{user.email}>"}
-        except MailGunException as e:
-            return {"message": str(e)}, 400
-        except:
-            traceback.print_exc()
-            return {"message": "Internal server error. Failed to resend the email."}, 500
-
-
-@auth_ns.route('/update_confirmation')
-class AuthUpdateConfirmation(Resource):
-    """reconfirmation email"""
-
-    @auth_ns.doc(
-        security='jwt_auth',
-        description='Send email with token to new E-mail.',
-        body=emailModel
-    )
-    @jwt_required()
-    def post(self):
-        if User.query.filter_by(email=request.json["email"]).first():
-            return {"message": "E-mail is already used."}, 400
-
-        try:
-            old_update_confirmation = current_user.most_recent_update_confirmation
-            if old_update_confirmation:
-                old_update_confirmation.force_to_expire()
-            new_update_confirmation = UpdateConfirmation(current_user.id, request.json["email"])
-            db.session.add(new_update_confirmation)
-            db.session.commit()
-            current_user.send_update_confirmation_email()
-            return {'message': 'An email with token '
-                               'has been sent to your email address, please check.'}, 201
-        except MailGunException as e:
-            return {"message": str(e)}, 400
-        except:
-            traceback.print_exc()
-            return {"message": "Internal server error. Failed to resend the email."}, 500
-
-    @auth_ns.doc(
-        security='jwt_auth',
-        description='Confirm token and update the email.',
-        body=updateConfirmationConfirm
-    )
-    @jwt_required()
-    def put(self):
-        token = request.json["token"]
-
-        update_confirmation = UpdateConfirmation.query.filter_by(id=token).first()
-        if not update_confirmation:
-            return {"message": "The token is incorrect."}, 400
-        if update_confirmation.is_expired:
-            return {"message": "That token is expired already. please start over.",
-                    "type": "danger"}, 400
-        if not update_confirmation.user_id == current_user.id:
-            return {"message": "Illegal operation found."}, 400
-
-        # if the email is used while process of updating.
-        if User.query.filter_by(email=update_confirmation.email).first():
-            return {"message": "Sorry, E-mail is already used by someone."}, 400
-
-        current_user.email = update_confirmation.email
-        update_confirmation.force_to_expire()
-        db.session.commit()
-
-        return {"message": "Your email has been updated successfully."}, 200
