@@ -138,10 +138,21 @@ class User(db.Model):
     def is_reset_expired(self) -> bool:
         return time() > self.reset_expired_at
 
+    def force_to_expired(self) -> None:
+        self.reset_expired_at = time()
+        db.session.commit()
+
     def create_reset_password_resource(self, token: str) -> None:
         self.reset_digest = generate_password_hash(token, method='sha256')
         self.reset_expired_at = int(time()) + CONFIRMATION_EXPIRE_DELTA
         db.session.commit()
+
+    def send_reset_password_email(self, token) -> Response:
+        link = os.getenv("FRONT_WELCOME_URL") + f"?token={token}&email={self.email}"
+        subject = "Reset password"
+        text = f"Hi,{self.nickname}. Please click the link to reset your password. {link}"
+        html = render_template("password_reset.html", name=self.nickname, link=link)
+        return MailGun.send_email([self.email], subject, text, html)
 
     @property
     def most_recent_confirmation(self) -> Confirmation:
@@ -154,7 +165,7 @@ class User(db.Model):
         link = os.getenv("FRONT_WELCOME_URL") + f"?=confirm={self.most_recent_confirmation.id}"
         subject = "Registration confirmation"
         # for medias not compatible with html.
-        text = f"Hi,{self.nickname}. Please click the link to confirm your account {link}"
+        text = f"Hi,{self.nickname}. Please click the link to confirm your account. {link}"
         html = render_template("confirm.html", name=self.nickname, link=link)
         return MailGun.send_email([self.email], subject, text, html)
 
@@ -164,7 +175,7 @@ class User(db.Model):
 
     def send_update_confirmation_email(self) -> Response:
         update_confirmation = self.most_recent_update_confirmation
-        subject = "Update E-mail."
+        subject = "Update E-mail"
         token = update_confirmation.id
         text = f"Hi,{self.nickname}. Please enter the token to Enqueter for confirming the new E-mail. token: {token}"
         html = render_template("confirm_update.html", name=self.nickname, token=token)
