@@ -35,7 +35,7 @@ class User(db.Model):
     nickname = Column(String(20), nullable=False)
     nickname_replaced = Column(String(20), nullable=False)
     introduce = Column(String(140), nullable=False, default="")
-    avatar = Column(String(255), nullable=False, default=f"egg_{randrange(1, 11)}.png'")
+    avatar = Column(String(255), nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
@@ -46,6 +46,7 @@ class User(db.Model):
         self.password = generate_password_hash(password, method='sha256')
         self.nickname = nickname
         self.nickname_replaced = nickname.replace(' ', '').replace('　', '')
+        self.avatar = f"egg_{randrange(1, 11)}.png"
 
     def to_dict(self) -> dict:
         return {
