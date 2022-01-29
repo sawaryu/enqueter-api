@@ -22,7 +22,7 @@ class Confirmation(db.Model):
         self.confirmed = False
 
     @classmethod
-    def find_by_if(cls, _id) -> "Confirmation":
+    def find_by_id(cls, _id) -> "Confirmation":
         return cls.query.filter_by(id=_id).first()
 
     def save_to_db(self) -> None:
@@ -60,12 +60,8 @@ class UpdateEmail(db.Model):
         self.expire_at = int(time()) + CONFIRMATION_EXPIRE_DELTA
 
     @classmethod
-    def find_by_if(cls, _id) -> "UpdateEmail":
-        return cls.query.filter_by(id=_id).first()
-
-    @classmethod
     def find_by_user_id_and_token(cls, user_id: int, token: str):
-        return cls.query.filter_by(user_id=user_id, token=token).first()
+        return cls.query.filter_by(user_id=user_id, id=token).first()
 
     def save_to_db(self) -> None:
         db.session.add(self)

@@ -262,7 +262,7 @@ class AuthConfirmation(Resource):
         description='Confirm the user is existing.'
     )
     def get(self, confirmation_id: str):
-        confirmation = Confirmation.query.filter_by(id=confirmation_id).first()
+        confirmation = Confirmation.find_by_id(confirmation_id)
         if not confirmation:
             return {"message": "Not Found the resource you want."}, 404
         if confirmation.confirmed:
@@ -320,16 +320,15 @@ class AuthUpdateEmail(Resource):
     )
     @jwt_required()
     def post(self):
-        if User.query.filter_by(email=request.json["email"]).first():
+        if User.find_by_email(request.json["email"]):
             return {"message": "E-mail is already used."}, 400
 
         try:
-            old_update_confirmation = current_user.most_recent_update_confirmation
-            if old_update_confirmation:
-                old_update_confirmation.force_to_expire()
-            new_update_confirmation = UpdateEmail(current_user.id, request.json["email"])
-            db.session.add(new_update_confirmation)
-            db.session.commit()
+            old_update_email_confirmation = current_user.most_recent_update_email_confirmation
+            if old_update_email_confirmation:
+                old_update_email_confirmation.force_to_expire()
+            new_update_email_confirmation = UpdateEmail(current_user.id, request.json["email"])
+            new_update_email_confirmation.save_to_db()
             current_user.send_update_confirmation_email()
             return {'message': 'An email with token '
                                'has been sent to your email address, please check.'}, 201
@@ -356,7 +355,7 @@ class AuthUpdateEmail(Resource):
                     "type": "danger"}, 400
 
         # if the email is used while process of updating.
-        if User.query.filter_by(email=update_email.email).first():
+        if User.find_by_email(update_email.email):
             return {"message": "Sorry, E-mail is already used by someone."}, 400
 
         current_user.email = update_email.email

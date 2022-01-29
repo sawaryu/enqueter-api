@@ -9,7 +9,7 @@ from sqlalchemy import String, Integer, Column, DateTime, Enum
 from werkzeug.security import generate_password_hash
 
 from api.libs.mailgun import MailGun
-from api.model.confirmation import Confirmation, UpdateConfirmation
+from api.model.confirmation import Confirmation, UpdateEmail
 
 from api.model.enum.enums import UserRole, NotificationCategory
 from api.model.others import Notification, bookmark, answer, \
@@ -27,7 +27,7 @@ class User(db.Model):
     password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.user)
 
-    # password reset
+    # reset password
     reset_digest = Column(String(255), default=None)
     reset_expired_at = Column(Integer, default=None)
 
@@ -63,8 +63,8 @@ class User(db.Model):
         }
 
     confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
-    update_confirmations = db.relationship('UpdateConfirmation', backref='user', lazy="dynamic",
-                                           cascade='all, delete-orphan')
+    update_emails = db.relationship('UpdateEmail', backref='user', lazy="dynamic",
+                                    cascade='all, delete-orphan')
     questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
                                 cascade='all, delete-orphan')
     answered_questions = db.relationship(
@@ -118,6 +118,8 @@ class User(db.Model):
         back_populates='active_user'
     )
 
+    """Basic"""
+
     @classmethod
     def find_by_id(cls, _id: int) -> "User":
         return cls.query.filter_by(id=_id).first()
@@ -133,6 +135,25 @@ class User(db.Model):
     def delete_from_db(self) -> None:
         db.session.delete(self)
         db.session.commit()
+
+    """Confirmation"""
+
+    @property
+    def most_recent_confirmation(self) -> Confirmation:
+        # Because of setting dynamic to "confirmations", it can be to take sequence of querying.
+        return self.confirmations.order_by(Confirmation.expire_at.desc()).first()
+
+    def send_confirmation_email(self) -> Response:
+        # ex: https://127.0.0.1:5000/ > https://127.0.0.1:5000
+        # link = request.url_root[0:-1] + f"/api/v1/auth/{self.most_recent_confirmation.id}/confirm"
+        link = os.getenv("FRONT_WELCOME_URL") + f"?=confirm={self.most_recent_confirmation.id}"
+        subject = "Registration confirmation"
+        # for medias not compatible with html.
+        text = f"Hi,{self.nickname}. Please click the link to confirm your account. {link}"
+        html = render_template("confirm.html", name=self.nickname, link=link)
+        return MailGun.send_email([self.email], subject, text, html)
+
+    """Reset password"""
 
     @property
     def is_reset_expired(self) -> bool:
@@ -151,37 +172,25 @@ class User(db.Model):
         link = os.getenv("FRONT_WELCOME_URL") + f"?token={token}&email={self.email}"
         subject = "Reset password"
         text = f"Hi,{self.nickname}. Please click the link to reset your password. {link}"
-        html = render_template("password_reset.html", name=self.nickname, link=link)
+        html = render_template("reset_password.html", name=self.nickname, link=link)
         return MailGun.send_email([self.email], subject, text, html)
 
-    @property
-    def most_recent_confirmation(self) -> Confirmation:
-        # Because of setting dynamic to "confirmations", it can be to take sequence of querying.
-        return self.confirmations.order_by(Confirmation.expire_at.desc()).first()
-
-    def send_confirmation_email(self) -> Response:
-        # ex: https://127.0.0.1:5000/ > https://127.0.0.1:5000
-        # link = request.url_root[0:-1] + f"/api/v1/auth/{self.most_recent_confirmation.id}/confirm"
-        link = os.getenv("FRONT_WELCOME_URL") + f"?=confirm={self.most_recent_confirmation.id}"
-        subject = "Registration confirmation"
-        # for medias not compatible with html.
-        text = f"Hi,{self.nickname}. Please click the link to confirm your account. {link}"
-        html = render_template("confirm.html", name=self.nickname, link=link)
-        return MailGun.send_email([self.email], subject, text, html)
+    """Update Email"""
 
     @property
-    def most_recent_update_confirmation(self) -> UpdateConfirmation:
-        return self.update_confirmations.order_by(UpdateConfirmation.expire_at.desc()).first()
+    def most_recent_update_email_confirmation(self) -> UpdateEmail:
+        return self.update_emails.order_by(UpdateEmail.expire_at.desc()).first()
 
     def send_update_confirmation_email(self) -> Response:
-        update_confirmation = self.most_recent_update_confirmation
+        update_email = self.most_recent_update_email_confirmation
         subject = "Update E-mail"
-        token = update_confirmation.id
+        token = update_email.id
         text = f"Hi,{self.nickname}. Please enter the token to Enqueter for confirming the new E-mail. token: {token}"
-        html = render_template("confirm_update.html", name=self.nickname, token=token)
-        return MailGun.send_email([update_confirmation.email], subject, text, html)
+        html = render_template("update_email.html", name=self.nickname, token=token)
+        return MailGun.send_email([update_email.email], subject, text, html)
 
-    # relationship
+    """Relationships"""
+
     def follow(self, user) -> None:
         if not self.is_following(user) and not self.id == user.id:
             self.followings.append(user)
@@ -193,11 +202,13 @@ class User(db.Model):
     def is_following(self, user) -> list:
         return list(filter(lambda x: x.id == user.id, self.followings))
 
-    # is already answered
+    """Answer"""
+
     def is_answered_question(self, question) -> list:
         return list(filter(lambda x: x.id == question.id, self.answered_questions))
 
-    # bookmark
+    """Bookmark"""
+
     def bookmark_question(self, question) -> None:
         if not self.is_bookmark_question(question):
             self.bookmarks.append(question)
@@ -209,7 +220,8 @@ class User(db.Model):
     def is_bookmark_question(self, question) -> list:
         return list(filter(lambda x: x.id == question.id, self.bookmarks))
 
-    # notification
+    """Notification"""
+
     def create_follow_notification(self, user) -> None:
         if not self.is_same_notification(user.id, NotificationCategory.follow) and not self.id == user.id:
             db.session.add(Notification(
