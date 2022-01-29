@@ -35,7 +35,7 @@ class UserShow(Resource):
     )
     @jwt_required()
     def get(self, user_id):
-        user = User.query.filter_by(id=user_id).first()
+        user = User.find_by_id(user_id)
         if not user:
             return {'status': 404, 'message': 'the page you want was not found.'}, 404
 

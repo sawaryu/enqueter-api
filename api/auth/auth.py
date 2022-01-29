@@ -193,7 +193,7 @@ class AuthLogout(Resource):
         now = datetime.now(timezone.utc)
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
         db.session.commit()
-        return jsonify(msg="JWT revoked")
+        return jsonify(message="Logged out completely.")
 
 
 @auth_ns.route('/password')
@@ -209,7 +209,7 @@ class AuthPasswordUpdate(Resource):
     def put(self):
         params = request.json
         if not check_password_hash(current_user.password, params['current_password']):
-            return {"message": "Incorrect current password"}, 401
+            return {"message": "Incorrect current password."}, 400
 
         current_user.password = generate_password_hash(params['new_password'], method='sha256')
         db.session.commit()
