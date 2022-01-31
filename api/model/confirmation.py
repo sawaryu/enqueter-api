@@ -45,6 +45,7 @@ class Confirmation(db.Model):
             db.session.commit()
 
 
+# TODO: user_idはいらないのでは？
 class UpdateEmail(db.Model):
     """Update E-mail"""
     id = Column(String(50), primary_key=True)

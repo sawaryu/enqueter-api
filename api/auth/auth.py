@@ -108,6 +108,26 @@ class AuthBasic(Resource):
 
     @auth_ns.doc(
         security='jwt_auth',
+        description="Update user's profile.",
+        body=update
+    )
+    @jwt_required()
+    def put(self):
+        params = request.json
+        if not current_user.username == params['username'] \
+                and User.query.filter_by(username=params['username']).one_or_none():
+            return {'message': 'The username has been already used.'}, 400
+
+        current_user.username = params['username']
+        current_user.nickname = params['nickname']
+        current_user.nickname_replaced = params['nickname'].replace(' ', '').replace('　', '')
+        current_user.introduce = params['introduce']
+        db.session.commit()
+
+        return {'message': 'the user was successfully updated.'}, 201
+
+    @auth_ns.doc(
+        security='jwt_auth',
         description='Delete User, avatar from S3.'
     )
     @jwt_required()
@@ -128,25 +148,6 @@ class AuthBasic(Resource):
         db.session.commit()
 
         return {'message': 'the user was successfully deleted. And token revoked'}, 200
-
-    @auth_ns.doc(
-        security='jwt_auth',
-        description="Update user's profile.",
-        body=update
-    )
-    @jwt_required()
-    def put(self):
-        params = request.json
-        if User.query.filter_by(username=params['username']).one_or_none():
-            return {'message': 'the username has been already used.'}, 400
-
-        current_user.username = params['username']
-        current_user.nickname = params['nickname']
-        current_user.nickname_replaced = params['nickname'].replace(' ', '').replace('　', '')
-        current_user.introduce = params['introduce']
-        db.session.commit()
-
-        return {'message': 'the user was successfully updated.'}, 201
 
 
 @auth_ns.route('/login')
