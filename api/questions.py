@@ -29,23 +29,33 @@ answerCreateModel = question_ns.model('BookmarkCreate', {
     'is_yes': fields.Boolean(required=True)
 })
 
-
+# TODO
 @question_ns.route('')
 class QuestionIndex(Resource):
     @question_ns.doc(
         security='jwt_auth',
-        description='Get all questions.'
+        description='Get all questions.',
+        params={'page': {'type': 'str'}}
     )
     @jwt_required()
     def get(self):
-        objects = db.session.query(Question, User) \
+        page = int(request.args.get('page'))
+        base_query = db.session.query(Question, User) \
             .join(User) \
             .order_by(Question.created_at.desc()) \
-            .all()
+            .paginate(page=page, per_page=6, error_out=False)
 
-        return list(map(lambda x: x.Question.to_dict() | {
+        total_pages = base_query.pages
+        objects = base_query.items
+
+        questions = list(map(lambda x: x.Question.to_dict() | {
             "user": x.User.to_dict()
         }, objects))
+
+        return {"data": {
+            "questions": questions,
+            "total_pages": total_pages
+        }}, 200
 
     @question_ns.doc(
         security='jwt_auth',
