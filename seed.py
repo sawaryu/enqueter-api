@@ -59,7 +59,7 @@ def main():
 
         """Create questions"""
         for n in range(1, 7):
-            for n_2 in range(1, 5):
+            for n_2 in range(1, 15):
                 content = faker_gen.address() + "?"
                 question = Question(
                     content=content,
