@@ -60,6 +60,18 @@ class Question(db.Model):
         lazy="dynamic"
     )
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "content": self.content,
+            "closed_at": str(self.closed_at),
+            "created_at": str(self.created_at),
+            "is_open": self.is_open,
+            "is_answered": self.is_answered,
+            "is_bookmarked": self.is_bookmarked
+        }
+
     def save_to_db(self) -> None:
         db.session.add(self)
         db.session.commit()
@@ -88,18 +100,6 @@ class Question(db.Model):
             return True
         else:
             return False
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "content": self.content,
-            "closed_at": str(self.closed_at),
-            "created_at": str(self.created_at),
-            "is_open": self.is_open,
-            "is_answered": self.is_answered,
-            "is_bookmarked": self.is_bookmarked
-        }
 
 
 class Notification(db.Model):

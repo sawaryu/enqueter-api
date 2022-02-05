@@ -1,3 +1,5 @@
+from time import time
+
 from faker import Faker
 from api.model.confirmation import Confirmation
 from api.model.enum.enums import UserRole
@@ -68,13 +70,14 @@ def main():
                 question.save_to_db()
 
         """Create closed questions"""
-        # for n in range(1, 7):
-        #     content = faker_gen.address() + "?"
-        #     question = Question(
-        #         content=content,
-        #         user_id=n
-        #     )
-        #     question.save_to_db()
+        for n in range(1, 7):
+            content = faker_gen.address() + "?"
+            question = Question(
+                content=content,
+                user_id=n
+            )
+            question.closed_at = time()
+            question.save_to_db()
 
 
 if __name__ == '__main__':

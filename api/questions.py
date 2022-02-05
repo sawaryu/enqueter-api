@@ -1,4 +1,6 @@
 from datetime import timedelta, datetime
+from time import time
+
 from flask import request
 
 from flask_restx import Namespace, fields, Resource
@@ -29,22 +31,42 @@ answerCreateModel = question_ns.model('BookmarkCreate', {
     'is_yes': fields.Boolean(required=True)
 })
 
+
 # TODO
 @question_ns.route('')
 class QuestionIndex(Resource):
     @question_ns.doc(
         security='jwt_auth',
         description='Get all questions.',
-        params={'page': {'type': 'str'}}
+        params={'page': {'type': 'str'}, 'sort': {'type': 'str'}}
     )
     @jwt_required()
     def get(self):
         page = int(request.args.get('page'))
-        base_query = db.session.query(Question, User) \
-            .join(User) \
-            .order_by(Question.created_at.desc()) \
-            .paginate(page=page, per_page=10, error_out=False)
+        sort = request.args.get('sort')
 
+        if sort == "answerable":
+            answered_question_ids = list(map(lambda x: x.id, current_user.answered_questions))
+            owner_question_ids = list(map(lambda x: x.id, current_user.questions))
+            base_query = db.session.query(Question, User) \
+                .join(User) \
+                .filter(Question.closed_at > time()) \
+                .filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
+                .order_by(Question.created_at.desc()) \
+                .paginate(page=page, per_page=10, error_out=False)
+        elif sort == "closed":
+            base_query = db.session.query(Question, User) \
+                .join(User) \
+                .filter(Question.closed_at < time()) \
+                .order_by(Question.created_at.desc()) \
+                .paginate(page=page, per_page=10, error_out=False)
+        else: # all
+            base_query = db.session.query(Question, User) \
+                .join(User) \
+                .order_by(Question.created_at.desc()) \
+                .paginate(page=page, per_page=10, error_out=False)
+
+        # get pages and questions.
         total_pages = base_query.pages
         objects = base_query.items
 
@@ -237,7 +259,7 @@ class QuestionOwner(Resource):
 class QuestionNext(Resource):
     @question_ns.doc(
         security='jwt_auth',
-        description='Get the next question_id at random '
+        description='Get the next question_id that is answerable at random '
                     'that is using for the next question page.(* only unanswered and not owned question).'
     )
     @jwt_required()
@@ -246,7 +268,7 @@ class QuestionNext(Resource):
         owner_question_ids = list(map(lambda x: x.id, current_user.questions))
 
         question = Question.query \
-            .filter(Question.closed_at > datetime.now()) \
+            .filter(Question.closed_at > time()) \
             .filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
             .order_by(func.rand()) \
             .limit(1) \
