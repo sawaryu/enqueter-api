@@ -65,7 +65,7 @@ class User(db.Model):
     confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
     update_emails = db.relationship('UpdateEmail', backref='user', lazy="dynamic",
                                     cascade='all, delete-orphan')
-    questions = db.relationship('Question', order_by="desc(Question.created_at)", backref='user', lazy=True,
+    questions = db.relationship('Question', order_by="desc(Question.id)", backref='user', lazy=True,
                                 cascade='all, delete-orphan')
     answered_questions = db.relationship(
         'Question',

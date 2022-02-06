@@ -46,7 +46,7 @@ class QuestionIndex(Resource):
 
         base_query = db.session.query(Question, User) \
             .join(User) \
-            .order_by(Question.created_at.desc()) \
+            .order_by(Question.id.desc()) \
             .paginate(page=page, per_page=10, error_out=False)
 
         # get pages and questions.
@@ -265,10 +265,13 @@ class QuestionNext(Resource):
 class QuestionTimeline(Resource):
     @question_ns.doc(
         security='jwt_auth',
-        description='Get a questions of timeline (related with following users.)'
+        description='Get a questions of timeline (related with following users.)',
+        params={'page': {'type': 'str'}}
     )
     @jwt_required()
     def get(self):
+        page = int(request.args.get("page"))
+
         following_ids = [current_user.id]
         for user in current_user.followings:
             following_ids.append(user.id)
@@ -276,8 +279,9 @@ class QuestionTimeline(Resource):
         objects = db.session.query(Question, User) \
             .filter(Question.user_id.in_(following_ids)) \
             .join(User) \
-            .order_by(Question.created_at.desc()) \
-            .all()
+            .order_by(Question.id.desc()) \
+            .paginate(page=page, per_page=10, error_out=False) \
+            .items
 
         return list(map(lambda x: x.Question.to_dict() | {
             "user": x.User.to_dict()

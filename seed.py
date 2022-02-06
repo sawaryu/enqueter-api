@@ -59,16 +59,6 @@ def main():
             target_user.follow(first_user)
             db.session.commit()
 
-        """Create questions"""
-        for n in range(1, 7):
-            for n_2 in range(1, 15):
-                content = faker_gen.address() + "?"
-                question = Question(
-                    content=content,
-                    user_id=n
-                )
-                question.save_to_db()
-
         """Create closed questions"""
         for n in range(1, 7):
             content = faker_gen.address() + "?"
@@ -78,6 +68,16 @@ def main():
             )
             question.closed_at = time()
             question.save_to_db()
+
+        """Create questions"""
+        for n in range(1, 7):
+            for n_2 in range(1, 15):
+                content = faker_gen.address() + "?"
+                question = Question(
+                    content=content,
+                    user_id=n
+                )
+                question.save_to_db()
 
 
 if __name__ == '__main__':
