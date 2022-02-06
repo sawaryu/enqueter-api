@@ -47,7 +47,7 @@ class QuestionIndex(Resource):
         base_query = db.session.query(Question, User) \
             .join(User) \
             .order_by(Question.id.desc()) \
-            .paginate(page=page, per_page=10, error_out=False)
+            .paginate(page=page, per_page=20, error_out=False)
 
         # get pages and questions.
         total_pages = base_query.pages
@@ -280,7 +280,7 @@ class QuestionTimeline(Resource):
             .filter(Question.user_id.in_(following_ids)) \
             .join(User) \
             .order_by(Question.id.desc()) \
-            .paginate(page=page, per_page=10, error_out=False) \
+            .paginate(page=page, per_page=15, error_out=False) \
             .items
 
         return list(map(lambda x: x.Question.to_dict() | {
