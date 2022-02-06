@@ -1,11 +1,10 @@
 import os
 
-from flask import Flask
+from flask import Flask, make_response
 from flask_jwt_extended import JWTManager
-from flask_restx import Api
+from flask_restx import Api, Resource
 from flask_cors import CORS
 from flask_migrate import Migrate
-
 from api.auth.admin import admin_ns
 from api.auth.auth import auth_ns
 from api.model.others import TokenBlocklist
@@ -18,14 +17,17 @@ from api.users import user_ns
 from database import db
 
 app = Flask(__name__)
+
+# basic setting
 app.config.from_object(config.config[os.getenv('FLASK_CONFIGURATION', 'develop')])
 db.init_app(app)
 migrate = Migrate(app, db)
 
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
 
+# jwt settings
 @jwt.user_identity_loader
 def user_identity_lookup(user):
     return user.id
@@ -44,6 +46,24 @@ def check_if_token_revoked(jwt_header, jwt_payload):
     return token is not None
 
 
+# while maintenance (https://hawksnowlog.blogspot.com/2020/12/flask-maintenance-mode.html)
+@app.before_request
+def check_under_maintenance():
+    if os.getenv("MAINTENANCE") == "true":
+        return make_response({"message": "Sorry, server maintenance now..."}, 503)
+
+
+@auth_ns.route('/maintenance')
+class AuthMaintenance(Resource):
+    """Check Maintenance(Very simple method.)"""
+    @auth_ns.doc(
+        description='Check maintenance.'
+    )
+    def get(self):
+        return {"message": "This application is working correctly."}, 200
+
+
+# Flask-rest setting.
 authorizations = {
     'jwt_auth': {
         'type': 'apiKey',

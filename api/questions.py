@@ -38,33 +38,16 @@ class QuestionIndex(Resource):
     @question_ns.doc(
         security='jwt_auth',
         description='Get all questions.',
-        params={'page': {'type': 'str'}, 'sort': {'type': 'str'}}
+        params={'page': {'type': 'str'}}
     )
     @jwt_required()
     def get(self):
         page = int(request.args.get('page'))
-        sort = request.args.get('sort')
 
-        if sort == "answerable":
-            answered_question_ids = list(map(lambda x: x.id, current_user.answered_questions))
-            owner_question_ids = list(map(lambda x: x.id, current_user.questions))
-            base_query = db.session.query(Question, User) \
-                .join(User) \
-                .filter(Question.closed_at > time()) \
-                .filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
-                .order_by(Question.created_at.desc()) \
-                .paginate(page=page, per_page=10, error_out=False)
-        elif sort == "closed":
-            base_query = db.session.query(Question, User) \
-                .join(User) \
-                .filter(Question.closed_at < time()) \
-                .order_by(Question.created_at.desc()) \
-                .paginate(page=page, per_page=10, error_out=False)
-        else: # all
-            base_query = db.session.query(Question, User) \
-                .join(User) \
-                .order_by(Question.created_at.desc()) \
-                .paginate(page=page, per_page=10, error_out=False)
+        base_query = db.session.query(Question, User) \
+            .join(User) \
+            .order_by(Question.created_at.desc()) \
+            .paginate(page=page, per_page=10, error_out=False)
 
         # get pages and questions.
         total_pages = base_query.pages

@@ -25,3 +25,18 @@ query user.questions.first()のようにクエリを連続できる
 
 * リソースを削除する際は関連する通知を全て削除する
   (例：ユーザーの削除、質問の削除、Relationshipの削除)
+  
+## maintenance
+
+not loggedin
+```bash
+curl -X 'GET' \
+  'http://localhost:5000/api/v1/auth/maintenance' \
+  -H 'accept: application/json'
+
+```
+
+while loggedin
+```bash
+
+```
