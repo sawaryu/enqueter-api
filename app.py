@@ -50,7 +50,7 @@ def check_if_token_revoked(jwt_header, jwt_payload):
 @app.before_request
 def check_under_maintenance():
     if os.getenv("MAINTENANCE") == "true":
-        return make_response({"message": "Sorry, server maintenance now..."}, 503)
+        return make_response({"message": "Sorry, This service is under maintenance."}, 503)
 
 
 @auth_ns.route('/maintenance')
