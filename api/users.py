@@ -42,7 +42,7 @@ class UserShow(Resource):
         user_dict = user.to_dict() | {
             "following_count": len(user.followings),
             "follower_count": len(user.follower),
-            "questions_count": len(user.questions),
+            "questions_count": len(user.questions.all()),
         }
 
         return user_dict
@@ -399,3 +399,43 @@ class UserStats(Resource):
             return {"total_point": target_user["total_point"], "rank": target_user["rank"]}
         else:
             return {"total_point": 0, "rank": None}
+
+
+# todo
+@user_ns.route('/<user_id>/analytics')
+class UserAnalytics(Resource):
+    @user_ns.doc(
+        security='jwt_auth',
+        description='Get the user analytics by user_id.',
+        params={'period': {'in': 'query', 'type': 'str', 'enum': ['week', 'month', 'all']}},
+    )
+    @jwt_required()
+    def get(self, user_id):
+        user = User.find_by_id(user_id)
+        if not user:
+            return {"status": 404, "message": "Not Found"}, 404
+
+        period = request.args.get("period")
+        if period not in ["week", "month", "all"]:
+            return {"status": 400, "message": "Bad request"}, 400
+        d = {}
+        if period == "week":
+            d = {"days": 7}
+        elif period == "month":
+            d = {"days": 30}
+        elif period == "all":
+            d = {"days": 365 * 100}
+
+        questions_count: int = len(user.questions.filter(Question.created_at > (datetime.now() - timedelta(**d))).all())
+        answers_count: int = len(
+            user.answered_questions.filter(answer.c.created_at > (datetime.now() - timedelta(**d))).all())
+        responses_count: int = db.session.query(func.count(answer.c.user_id)) \
+            .join(Question, Question.id == answer.c.question_id) \
+            .filter(Question.user_id == user_id) \
+            .filter(answer.c.created_at > (datetime.now() - timedelta(**d))) \
+            .scalar()
+
+        print(responses_count)
+
+        return {"questions_count": questions_count, "answers_count": answers_count,
+                "responses_count": responses_count}, 200
