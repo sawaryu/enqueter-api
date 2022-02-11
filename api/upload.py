@@ -29,7 +29,7 @@ class UploadUserAvatar(Resource):
     @upload_ns.hide
     @upload_ns.doc(
         security='jwt_auth',
-        description='ユーザーアバターをアップロードする'
+        description='Upload avatar to S3.'
     )
     @jwt_required()
     def post(self):
@@ -87,7 +87,7 @@ class UploadUserAvatar(Resource):
         return {"message": "success"}, 201
 
 
-# アスペクト比を維持したままサイズを調整
+# Sustain aspect ratio.
 def scale_to_width(image, width):
     height = round(image.height * width / image.width)
     return image.resize((width, height))

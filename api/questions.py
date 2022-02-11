@@ -69,7 +69,8 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def post(self):
-        if current_user.questions and (current_user.questions[0].created_at + timedelta(minutes=3)) > datetime.now():
+        questions = current_user.questions.all()
+        if questions and (questions[0].created_at + timedelta(minutes=3)) > datetime.now():
             return {
                        "status": 400,
                        "message": "Not yet passed 3 minutes from latest question you created."

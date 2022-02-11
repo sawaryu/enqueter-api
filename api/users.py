@@ -407,7 +407,7 @@ class UserAnalytics(Resource):
     @user_ns.doc(
         security='jwt_auth',
         description='Get the user analytics by user_id.',
-        params={'period': {'in': 'query', 'type': 'str', 'enum': ['week', 'month', 'all']}},
+        params={'period': {'in': 'query', 'type': 'str', 'enum': ['week', 'month', 'total']}},
     )
     @jwt_required()
     def get(self, user_id):
@@ -416,14 +416,11 @@ class UserAnalytics(Resource):
             return {"status": 404, "message": "Not Found"}, 404
 
         period = request.args.get("period")
-        if period not in ["week", "month", "all"]:
-            return {"status": 400, "message": "Bad request"}, 400
-        d = {}
         if period == "week":
             d = {"days": 7}
         elif period == "month":
             d = {"days": 30}
-        elif period == "all":
+        else:
             d = {"days": 365 * 100}
 
         questions_count: int = len(user.questions.filter(Question.created_at > (datetime.now() - timedelta(**d))).all())
@@ -435,7 +432,4 @@ class UserAnalytics(Resource):
             .filter(answer.c.created_at > (datetime.now() - timedelta(**d))) \
             .scalar()
 
-        print(responses_count)
-
-        return {"questions_count": questions_count, "answers_count": answers_count,
-                "responses_count": responses_count}, 200
+        return [responses_count, questions_count, answers_count], 200

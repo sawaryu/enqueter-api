@@ -22,10 +22,10 @@ from api.upload import client
 from api.libs.mailgun import MailGunException
 from database import db
 
-auth_ns = Namespace('/auth')
+auth_ns = Namespace('/auth', description="Authentication")
 
 username_regex = r'\A[a-z\d]{1,15}\Z(?i)'
-email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+email_regex = r"^(?!.*…)[a-zA-Z0-9_+-]+(.[a-zA-Z0-9_+-]+)*@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.)+[a-zA-Z]{2,}$"
 password_regex = r'\A[a-z\d]{8,72}\Z(?i)'
 nickname_regex = r'\S'
 
