@@ -7,6 +7,9 @@
 
 メリット
 query user.questions.first()のようにクエリを連続できる
+
+`user.questions`の時点ではsqlを定義しているだけ
+
 不必要な読み込みを行わない。 > 必要な時のみにDBloadingを行う
 
 ## tasks
@@ -25,18 +28,26 @@ query user.questions.first()のようにクエリを連続できる
 
 * リソースを削除する際は関連する通知を全て削除する
   (例：ユーザーの削除、質問の削除、Relationshipの削除)
-  
-## maintenance
 
-not loggedin
-```bash
-curl -X 'GET' \
-  'http://localhost:5000/api/v1/auth/maintenance' \
-  -H 'accept: application/json'
+## バッチ処理
 
+◇処理
+
+```text
+from app import app
+
+@app.app_context()
+def step_1():
+    # 以下に処理内容を記述
+    pass
 ```
 
-while loggedin
-```bash
+◇モデル構造
 
-```
+|user_id|week|moth|total|a|a|
+|---|---|---|---|---|---|
+|td|td|a|a|a|a|
+|td|td|a|a|a|a|
+|td|td|a|a|a|a|
+
+

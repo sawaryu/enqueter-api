@@ -5,7 +5,7 @@ from time import time
 
 from flask import Response, render_template
 from flask_jwt_extended import current_user
-from sqlalchemy import String, Integer, Column, DateTime, Enum
+from sqlalchemy import String, Integer, Column, DateTime, Enum, ForeignKey
 from werkzeug.security import generate_password_hash
 
 from api.libs.mailgun import MailGun
@@ -17,6 +17,34 @@ from api.model.others import Notification, bookmark, answer, \
 from database import db
 
 CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
+
+
+class PointStats(db.Model):
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
+    total_rank = Column(Integer, nullable=False)
+    total_point = Column(Integer, nullable=False)
+    month_rank = Column(Integer, default=None)
+    month_point = Column(Integer, default=None)
+    week_rank = Column(Integer, default=None)
+    week_point = Column(Integer, default=None)
+    execute_time = Column(Integer, nullable=False)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "total_rank": self.total_rank,
+            "total_point": self.total_point,
+            "month_rank": self.month_rank,
+            "month_point": self.month_point,
+            "week_rank": self.week_rank,
+            "week_point": self.week_point,
+        }
+
+    @classmethod
+    def find_by_user_id(cls, user_id: int) -> "PointStats":
+        return cls.query.filter_by(user_id=user_id).first()
 
 
 class User(db.Model):
@@ -61,6 +89,8 @@ class User(db.Model):
             "is_following": True if current_user.is_following(self) else False,
             "role": self.role
         }
+
+    point_stats = db.relationship('PointStats', backref="user", lazy=True, cascade='all, delete-orphan')
 
     confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
     update_emails = db.relationship('UpdateEmail', backref='user', lazy="dynamic",
