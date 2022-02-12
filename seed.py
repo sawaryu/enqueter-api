@@ -1,6 +1,7 @@
 from time import time
 
 from faker import Faker
+from sqlalchemy import MetaData, text
 
 from api.model.confirmation import Confirmation
 from api.model.enum.enums import UserRole
@@ -17,13 +18,15 @@ def main():
         try:
             """reset the database"""
             app.logger.info("Session begin.")
-            db.drop_all()
+            db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+            db.session.commit()
+            # db.drop_all()
+            meta = db.metadata
+            for tbl in reversed(meta.sorted_tables):
+                db.session.execute(text(f'DROP TABLE IF EXISTS {tbl};'))
+                db.session.commit()
             db.create_all()
             app.logger.info("Drop and Create tables. And starting create seed date.")
-
-            # sql = insert(sequence).values(id=0)
-            # db.session.execute(sql)
-            # db.session.flush()
 
             """Create users"""
             faker_gen = Faker()
@@ -85,6 +88,7 @@ def main():
                     )
                     db.session.add(question)
                     db.session.flush()
+            db.session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
             db.session.commit()
             app.logger.info("Successfully created data.")
         except:
