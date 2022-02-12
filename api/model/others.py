@@ -18,7 +18,7 @@ user_relationship = db.Table('user_relationship',
 
 answer = db.Table('answer',
                   db.Column('user_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
-                  db.Column('question_id', Integer, ForeignKey('question.id', ondelete="SET NULL")),  # important
+                  db.Column('question_id', Integer, ForeignKey('question.id', ondelete="CASCADE"), nullable=False),
                   db.Column('is_yes', Boolean, nullable=False),
                   db.Column('result_point', Integer, nullable=False),
                   db.Column('created_at', DateTime, nullable=False, default=datetime.now()),

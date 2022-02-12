@@ -1,7 +1,7 @@
 from time import time
 
 from faker import Faker
-from sqlalchemy import MetaData, text
+from sqlalchemy import text
 
 from api.model.confirmation import Confirmation
 from api.model.enum.enums import UserRole
@@ -23,6 +23,7 @@ def main():
             # db.drop_all()
             meta = db.metadata
             for tbl in reversed(meta.sorted_tables):
+                app.logger.info(f'{tbl} dropped.')
                 db.session.execute(text(f'DROP TABLE IF EXISTS {tbl};'))
                 db.session.commit()
             db.create_all()
