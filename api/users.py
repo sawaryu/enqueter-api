@@ -311,7 +311,7 @@ class UsersSearchHistoryShow(Resource):
 class UserRanking(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get the users ranking top 10 (by pt) and current_user rank info',
+        description='Get the users ranking top 50 (by pt) and logged_in_user rank info',
         params={'period': {'type': 'str', 'enum': ['week', 'month', 'all']}}
     )
     @jwt_required()
@@ -330,9 +330,10 @@ class UserRanking(Resource):
 
         objects = db.session.query(select_query[0].label("rank"), select_query[1].label("point"), User) \
             .join(User, User.id == PointStats.user_id) \
-            .order_by(sub_query).all()
-
-        print("result", objects)
+            .order_by(sub_query) \
+            .order_by(User.id.desc()) \
+            .limit(50) \
+            .all()
 
         users = list(map(lambda x: x.User.to_dict() | {
             "rank": x.rank,
@@ -344,64 +345,12 @@ class UserRanking(Resource):
         return {"users": users, "logged_in_user": logged_in_user}, 200
 
 
-# TODO
+# todo
 @user_ns.route('/<user_id>/stats')
 class UserStats(Resource):
     @user_ns.doc(
         security='jwt_auth',
         description='Get the user stats by user_id.',
-        params={'period': {'in': 'query', 'type': 'str', 'enum': ['week', 'month', 'all']}},
-    )
-    @jwt_required()
-    def get(self, user_id):
-        # get the user
-        user = User.query.filter_by(id=user_id).first()
-        if not user:
-            return {"status": 404, "message": "Not Found"}, 404
-
-        # get query parameter.
-        period = request.args.get("period")
-        if period not in ["week", "month", "all"]:
-            return {"status": 400, "message": "Bad request"}, 400
-        d = {}
-        if period == "week":
-            d = {"days": 7}
-        elif period == "month":
-            d = {"days": 30}
-        elif period == "all":
-            d = {"days": 365 * 100}
-
-        # execute sql
-        objects = db.session.query(User, func.sum(answer.c.result_point).label("total_point")) \
-            .join(answer, answer.c.user_id == User.id) \
-            .filter(answer.c.created_at > (datetime.now() - timedelta(**d))) \
-            .group_by(User.id) \
-            .order_by(func.sum(answer.c.result_point).desc()) \
-            .all()
-
-        users = list(map(lambda x: x.User.to_dict() | {
-            "total_point": int(x[1])
-        }, objects))
-
-        target_user = None
-        for (index, user) in enumerate(users):
-            user["rank"] = index + 1
-            if user["id"] == int(user_id):
-                target_user = user
-                break
-
-        if target_user:
-            return {"total_point": target_user["total_point"], "rank": target_user["rank"]}
-        else:
-            return {"total_point": 0, "rank": None}
-
-
-# todo
-@user_ns.route('/<user_id>/analytics')
-class UserAnalytics(Resource):
-    @user_ns.doc(
-        security='jwt_auth',
-        description='Get the user analytics by user_id.',
         params={'period': {'in': 'query', 'type': 'str', 'enum': ['week', 'month', 'total']}},
     )
     @jwt_required()
@@ -413,11 +362,15 @@ class UserAnalytics(Resource):
         period = request.args.get("period")
         if period == "week":
             d = {"days": 7}
+            select_query = [PointStats.week_rank, PointStats.week_point]
         elif period == "month":
             d = {"days": 30}
+            select_query = [PointStats.month_rank, PointStats.month_point]
         else:
             d = {"days": 365 * 100}
+            select_query = [PointStats.total_rank, PointStats.total_point]
 
+        # Radar data
         questions_count: int = len(user.questions.filter(Question.created_at > (datetime.now() - timedelta(**d))).all())
         answers_count: int = len(
             user.answered_questions.filter(answer.c.created_at > (datetime.now() - timedelta(**d))).all())
@@ -426,5 +379,17 @@ class UserAnalytics(Resource):
             .filter(Question.user_id == user_id) \
             .filter(answer.c.created_at > (datetime.now() - timedelta(**d))) \
             .scalar()
+        radar_data: list = [responses_count, questions_count, answers_count]
 
-        return [responses_count, questions_count, answers_count], 200
+        # User point_stats
+        point_stats_object = db.session.query(select_query[0].label("rank"), select_query[1].label("point")) \
+            .filter(PointStats.user_id == user_id).first()
+
+        point_stats = None
+        if point_stats_object and point_stats_object.rank and point_stats_object.point:
+            point_stats = {
+                "rank": point_stats_object.rank,
+                "point": point_stats_object.point
+            }
+
+        return {"radar_data": radar_data, "point_stats": point_stats}, 200

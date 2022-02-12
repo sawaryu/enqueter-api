@@ -18,6 +18,9 @@ from database import db
 
 CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
 
+# firstly set "0" in the seed.
+# sequence = db.Table('sequence', db.Column('id', Integer, nullable=False))
+
 
 class PointStats(db.Model):
     id = Column(Integer, primary_key=True)
@@ -28,7 +31,7 @@ class PointStats(db.Model):
     month_point = Column(Integer, default=None)
     week_rank = Column(Integer, default=None)
     week_point = Column(Integer, default=None)
-    execute_time = Column(Integer, nullable=False)
+    # sequence_id = Column(Integer, nullable=False, index=True)
 
     def to_dict(self) -> dict:
         return {
