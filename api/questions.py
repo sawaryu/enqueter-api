@@ -7,6 +7,7 @@ from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
+from api.model.aggregate import point, response
 from api.model.enum.enums import AnswerResultPoint
 from api.model.others import Question, answer, Notification
 from api.model.user import User
@@ -120,8 +121,8 @@ class QuestionsAnswer(Resource):
     )
     @jwt_required()
     def post(self):
-        params = request.json
-        question = Question.query.filter_by(id=params["question_id"]).first()
+        params: dict = request.json
+        question: Question = Question.query.filter_by(id=params["question_id"]).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
 
@@ -133,43 +134,55 @@ class QuestionsAnswer(Resource):
 
         # attention that below method is the 'Dynamic'. So it should be got by the 'all()' method finally.
         if not question.answered_users.all():
-            result = AnswerResultPoint.FIRST.value
+            result_point: int = AnswerResultPoint.FIRST.value
 
         else:
-            yes_count = len(db.session.query(answer)
-                            .filter(answer.c.question_id == params["question_id"])
-                            .filter(answer.c.is_yes == 1)
-                            .all())
+            yes_count: int = len(db.session.query(answer)
+                                 .filter(answer.c.question_id == params["question_id"])
+                                 .filter(answer.c.is_yes == 1)
+                                 .all())
 
-            no_count = len(db.session.query(answer)
-                           .filter(answer.c.question_id == params["question_id"])
-                           .filter(answer.c.is_yes == 0)
-                           .all())
+            no_count: int = len(db.session.query(answer)
+                                .filter(answer.c.question_id == params["question_id"])
+                                .filter(answer.c.is_yes == 0)
+                                .all())
             if request.json["is_yes"]:
                 yes_count += 1
                 if yes_count == no_count:
-                    result = AnswerResultPoint.EVEN.value
+                    result_point = AnswerResultPoint.EVEN.value
                 elif yes_count > no_count:
-                    result = AnswerResultPoint.RIGHT.value
+                    result_point = AnswerResultPoint.RIGHT.value
                 else:
-                    result = AnswerResultPoint.WRONG.value
+                    result_point = AnswerResultPoint.WRONG.value
             else:
                 no_count += 1
                 if yes_count == no_count:
-                    result = AnswerResultPoint.EVEN.value
+                    result_point = AnswerResultPoint.EVEN.value
                 elif no_count > yes_count:
-                    result = AnswerResultPoint.RIGHT.value
+                    result_point = AnswerResultPoint.RIGHT.value
                 else:
-                    result = AnswerResultPoint.WRONG.value
+                    result_point = AnswerResultPoint.WRONG.value
 
         # create answer
         insert_answer = answer.insert().values(
             user_id=current_user.id,
             question_id=question.id,
             is_yes=params["is_yes"],
-            result_point=result
         )
         db.session.execute(insert_answer)
+
+        # create point
+        insert_point = point.insert().values(
+            user_id=current_user.id,
+            point=result_point
+        )
+        db.session.execute(insert_point)
+
+        # create response
+        insert_response = response.insert().values(
+            user_id=question.user_id,
+        )
+        db.session.execute(insert_response)
 
         # create notifications
         current_user.create_answer_notification(question)
@@ -177,7 +190,7 @@ class QuestionsAnswer(Resource):
         # commit
         db.session.commit()
 
-        return {"result": result}
+        return {"result": result_point}
 
 
 # common question info

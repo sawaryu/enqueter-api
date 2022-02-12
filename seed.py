@@ -27,7 +27,7 @@ def main():
                 db.session.execute(text(f'DROP TABLE IF EXISTS {tbl};'))
                 db.session.commit()
             db.create_all()
-            app.logger.info("Drop and Create tables. And starting create seed date.")
+            app.logger.info("Done drop and create tables. And starting create seed date.")
 
             """Create users"""
             faker_gen = Faker()

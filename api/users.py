@@ -8,7 +8,7 @@ from sqlalchemy import func
 
 from api.model.enum.enums import NotificationCategory
 from api.model.others import SearchHistory, Question, bookmark, answer, Notification, user_relationship
-from api.model.user import User, PointStats
+from api.model.user import User, Stats
 from database import db
 
 user_ns = Namespace('/users')
@@ -319,17 +319,17 @@ class UserRanking(Resource):
         # get query parameter.
         period = request.args.get("period")
         if period == "week":
-            select_query = [PointStats.week_rank, PointStats.week_point]
-            sub_query = PointStats.week_point.desc()
+            select_query = [Stats.week_rank_point, Stats.week_point]
+            sub_query = Stats.week_point.desc()
         elif period == "month":
-            select_query = [PointStats.month_rank, PointStats.month_point]
-            sub_query = PointStats.month_point.desc()
+            select_query = [Stats.month_rank_point, Stats.month_point]
+            sub_query = Stats.month_point.desc()
         else:  # all
-            select_query = [PointStats.total_rank, PointStats.total_point]
-            sub_query = PointStats.total_point.desc()
+            select_query = [Stats.total_rank_point, Stats.total_point]
+            sub_query = Stats.total_point.desc()
 
         objects = db.session.query(select_query[0].label("rank"), select_query[1].label("point"), User) \
-            .join(User, User.id == PointStats.user_id) \
+            .join(User, User.id == Stats.user_id) \
             .order_by(sub_query) \
             .order_by(User.id.desc()) \
             .limit(50) \
@@ -345,51 +345,17 @@ class UserRanking(Resource):
         return {"users": users, "logged_in_user": logged_in_user}, 200
 
 
-# todo
 @user_ns.route('/<user_id>/stats')
 class UserStats(Resource):
     @user_ns.doc(
         security='jwt_auth',
         description='Get the user stats by user_id.',
-        params={'period': {'in': 'query', 'type': 'str', 'enum': ['week', 'month', 'total']}},
     )
     @jwt_required()
     def get(self, user_id):
-        user = User.find_by_id(user_id)
-        if not user:
-            return {"status": 404, "message": "Not Found"}, 404
+        # user = User.find_by_id(user_id)
+        # if user:
+        #     return user.stats.to_dict()
+        return None
 
-        period = request.args.get("period")
-        if period == "week":
-            d = {"days": 7}
-            select_query = [PointStats.week_rank, PointStats.week_point]
-        elif period == "month":
-            d = {"days": 30}
-            select_query = [PointStats.month_rank, PointStats.month_point]
-        else:
-            d = {"days": 365 * 100}
-            select_query = [PointStats.total_rank, PointStats.total_point]
 
-        # Radar data
-        questions_count: int = len(user.questions.filter(Question.created_at > (datetime.now() - timedelta(**d))).all())
-        answers_count: int = len(
-            user.answered_questions.filter(answer.c.created_at > (datetime.now() - timedelta(**d))).all())
-        responses_count: int = db.session.query(func.count(answer.c.user_id)) \
-            .join(Question, Question.id == answer.c.question_id) \
-            .filter(Question.user_id == user_id) \
-            .filter(answer.c.created_at > (datetime.now() - timedelta(**d))) \
-            .scalar()
-        radar_data: list = [responses_count, questions_count, answers_count]
-
-        # User point_stats
-        point_stats_object = db.session.query(select_query[0].label("rank"), select_query[1].label("point")) \
-            .filter(PointStats.user_id == user_id).first()
-
-        point_stats = None
-        if point_stats_object and point_stats_object.rank and point_stats_object.point:
-            point_stats = {
-                "rank": point_stats_object.rank,
-                "point": point_stats_object.point
-            }
-
-        return {"radar_data": radar_data, "point_stats": point_stats}, 200

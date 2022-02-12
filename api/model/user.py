@@ -18,35 +18,67 @@ from database import db
 
 CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
 
+
 # firstly set "0" in the seed.
 # sequence = db.Table('sequence', db.Column('id', Integer, nullable=False))
 
 
-class PointStats(db.Model):
+class Stats(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
-    total_rank = Column(Integer, nullable=False)
-    total_point = Column(Integer, nullable=False)
-    month_rank = Column(Integer, default=None)
+
+    # point (get from Point Table)
+    total_rank_point = Column(Integer, default=None)
+    total_point = Column(Integer, default=None)
+    month_rank_point = Column(Integer, default=None)
     month_point = Column(Integer, default=None)
-    week_rank = Column(Integer, default=None)
+    week_rank_point = Column(Integer, default=None)
     week_point = Column(Integer, default=None)
-    # sequence_id = Column(Integer, nullable=False, index=True)
+
+    # response (get from Response table)
+    total_rank_response = Column(Integer, default=None)
+    total_response = Column(Integer, default=None)
+    month_rank_response = Column(Integer, default=None)
+    month_response = Column(Integer, default=None)
+    week_rank_response = Column(Integer, default=None)
+    week_response = Column(Integer, default=None)
+
+    # questions (get from Questions table)
+    total_questions = Column(Integer, default=None)
+    week_questions = Column(Integer, default=None)
+    month_questions = Column(Integer, default=None)
+
+    # answers (get from Point table)
+    total_answers = Column(Integer, default=None)
+    week_answers = Column(Integer, default=None)
+    month_answers = Column(Integer, default=None)
 
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "total_rank": self.total_rank,
+            "total_rank_point": self.total_rank_point,
             "total_point": self.total_point,
-            "month_rank": self.month_rank,
+            "month_rank_point": self.month_rank_point,
             "month_point": self.month_point,
-            "week_rank": self.week_rank,
+            "week_rank_point": self.week_rank_point,
             "week_point": self.week_point,
+            "total_rank_response": self.total_rank_response,
+            "total_response": self.total_response,
+            "month_rank_response": self.month_rank_response,
+            "month_response": self.month_response,
+            "week_rank_response": self.week_rank_response,
+            "week_response": self.week_response,
+            "total_questions": self.total_questions,
+            "week_questions": self.week_questions,
+            "month_questions": self.month_questions,
+            "total_answers": self.total_questions,
+            "week_answers": self.week_answers,
+            "month_answers": self.month_answers,
         }
 
     @classmethod
-    def find_by_user_id(cls, user_id: int) -> "PointStats":
+    def find_by_user_id(cls, user_id: int) -> "Stats":
         return cls.query.filter_by(user_id=user_id).first()
 
 
@@ -93,7 +125,7 @@ class User(db.Model):
             "role": self.role
         }
 
-    point_stats = db.relationship('PointStats', backref="user", lazy=True, cascade='all, delete-orphan')
+    stats = db.relationship('Stats', backref="user", lazy=True, cascade='all, delete-orphan')
 
     confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
     update_emails = db.relationship('UpdateEmail', backref='user', lazy="dynamic",

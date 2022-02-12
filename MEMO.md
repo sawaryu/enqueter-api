@@ -50,4 +50,20 @@ def step_1():
 |td|td|a|a|a|a|
 |td|td|a|a|a|a|
 
+```text
+  """Sequence"""
+  before_sequence_id: int = db.session.query(sequence.c.id).scalar()
+  if before_sequence_id is None:
+      app.logger.error("The sequence record does not exist. Please check "
+                       "your application had initialize 'seed' completely.")
+      raise
+
+  update_sequence = text("UPDATE sequence SET id=LAST_INSERT_ID(id+1);")
+  db.session.execute(update_sequence)
+  db.session.flush()
+
+  sequence_id: int = db.session.execute(text("SELECT LAST_INSERT_ID();")).scalar()
+  app.logger.info(f'{message}, before_sequence: {before_sequence_id}, new_sequence: {sequence_id}')
+```
+
 
