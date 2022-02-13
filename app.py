@@ -5,7 +5,6 @@ from flask_jwt_extended import JWTManager
 from flask_restx import Api, Resource
 from flask_cors import CORS
 from flask_migrate import Migrate
-from api.auth.admin import admin_ns
 from api.auth.auth import auth_ns
 from api.model.others import TokenBlocklist
 from api.model.user import User
@@ -56,6 +55,7 @@ def check_under_maintenance():
 @auth_ns.route('/maintenance')
 class AuthMaintenance(Resource):
     """Check Maintenance(Very simple method.)"""
+
     @auth_ns.doc(
         description='Check maintenance.'
     )
@@ -83,7 +83,6 @@ api = Api(
     authorizations=authorizations
 )
 api.add_namespace(auth_ns, path='/auth')
-api.add_namespace(admin_ns, path='/admin')
 api.add_namespace(user_ns, path='/users')
 api.add_namespace(question_ns, path='/questions')
 api.add_namespace(upload_ns, path='/upload')

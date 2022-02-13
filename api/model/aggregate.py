@@ -9,8 +9,3 @@ point = db.Table('point',
                  db.Column('point', Integer, nullable=False),  # right: 3, wrong: -3, even: 0, first: 1
                  db.Column('created_at', DateTime, nullable=False, default=datetime.now()),
                  )
-
-# response = db.Table('response',
-#                     db.Column('user_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
-#                     db.Column('created_at', DateTime, nullable=False, default=datetime.now()),
-#                     )

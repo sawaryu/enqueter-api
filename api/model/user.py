@@ -19,36 +19,6 @@ from database import db
 CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
 
 
-# firstly set "0" in the seed.
-# sequence = db.Table('sequence', db.Column('id', Integer, nullable=False))
-
-# class ResponseStats(db.Model):
-#     id = Column(Integer, primary_key=True)
-#     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
-#     total_rank = Column(Integer, default=None)
-#     total_response = Column(Integer, default=None)
-#     month_rank = Column(Integer, default=None)
-#     month_response = Column(Integer, default=None)
-#     week_rank = Column(Integer, default=None)
-#     week_response = Column(Integer, default=None)
-#
-#     def to_dict(self) -> dict:
-#         return {
-#             "id": self.id,
-#             "user_id": self.user_id,
-#             "total_rank": self.total_rank,
-#             "month_rank": self.month_rank,
-#             "week_rank": self.week_rank,
-#             "total_response": self.total_response,
-#             "month_response": self.month_response,
-#             "week_response": self.week_response,
-#         }
-#
-#     @classmethod
-#     def find_by_user_id(cls, user_id: int) -> "ResponseStats":
-#         return cls.query.filter_by(user_id=user_id).first()
-
-
 class PointStats(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
@@ -140,7 +110,6 @@ class User(db.Model):
         }
 
     point_stats = db.relationship('PointStats', backref="user", lazy="dynamic", cascade='all, delete-orphan')
-    # response_stats = db.relationship('ResponseStats', backref="user", lazy="dynamic", cascade='all, delete-orphan')
 
     confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
     update_emails = db.relationship('UpdateEmail', backref='user', lazy="dynamic",
