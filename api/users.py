@@ -6,9 +6,10 @@ from flask_jwt_extended import jwt_required, current_user
 from flask_restx import Resource, Namespace, fields
 from sqlalchemy import func
 
+from api.model.aggregate import point
 from api.model.enum.enums import NotificationCategory
 from api.model.others import SearchHistory, Question, bookmark, answer, Notification, user_relationship
-from api.model.user import User, Stats
+from api.model.user import User, PointStats
 from database import db
 
 user_ns = Namespace('/users')
@@ -316,20 +317,27 @@ class UserRanking(Resource):
     )
     @jwt_required()
     def get(self):
-        # get query parameter.
         period = request.args.get("period")
+        current_user_stats = current_user.point_stats.first()
+
         if period == "week":
-            select_query = [Stats.week_rank_point, Stats.week_point]
-            sub_query = Stats.week_point.desc()
+            select_query = [PointStats.week_rank, PointStats.week_point]
+            sub_query = PointStats.week_point.desc()
+            if current_user_stats:
+                current_user_stats = current_user_stats.get_week
         elif period == "month":
-            select_query = [Stats.month_rank_point, Stats.month_point]
-            sub_query = Stats.month_point.desc()
+            select_query = [PointStats.month_rank, PointStats.month_point]
+            sub_query = PointStats.month_point.desc()
+            if current_user_stats:
+                current_user_stats = current_user_stats.get_month
         else:  # all
-            select_query = [Stats.total_rank_point, Stats.total_point]
-            sub_query = Stats.total_point.desc()
+            select_query = [PointStats.total_rank, PointStats.total_point]
+            sub_query = PointStats.total_point.desc()
+            if current_user_stats:
+                current_user_stats = current_user_stats.get_total
 
         objects = db.session.query(select_query[0].label("rank"), select_query[1].label("point"), User) \
-            .join(User, User.id == Stats.user_id) \
+            .join(User, User.id == PointStats.user_id) \
             .order_by(sub_query) \
             .order_by(User.id.desc()) \
             .limit(50) \
@@ -340,9 +348,7 @@ class UserRanking(Resource):
             "point": x.point
         }, objects))
 
-        logged_in_user = next(filter(lambda x: x["id"] == current_user.id, users), None)
-
-        return {"users": users, "logged_in_user": logged_in_user}, 200
+        return {"users": users, "current_user_stats": current_user_stats}, 200
 
 
 @user_ns.route('/<user_id>/stats')
@@ -350,12 +356,38 @@ class UserStats(Resource):
     @user_ns.doc(
         security='jwt_auth',
         description='Get the user stats by user_id.',
+        params={'period': {'type': 'str', 'enum': ['week', 'month', 'all']}}
     )
     @jwt_required()
     def get(self, user_id):
-        # user = User.find_by_id(user_id)
-        # if user:
-        #     return user.stats.to_dict()
-        return None
+        user = User.find_by_id(user_id)
+        if not user:
+            return {"message": "Not Found."}, 404
 
+        period = request.args.get("period")
+        point_stats = user.point_stats.first()
+        if period == "week":
+            d = {"weeks": 1}
+            if point_stats:
+                point_stats = point_stats.get_week
+        elif period == "month":
+            d = {"days": 30}
+            if point_stats:
+                point_stats = point_stats.get_month
+        else:  # all
+            d = {"days": 365 * 100}
+            if point_stats:
+                point_stats = point_stats.get_total
 
+        objects = db.session.query(point.c.point.label("point")) \
+            .filter(point.c.user_id == user_id) \
+            .filter(point.c.created_at > (datetime.now() - timedelta(**d))) \
+            .all()
+        right_count = len(list(filter(lambda x: x.point == 3, objects)))
+        first_count = len(list(filter(lambda x: x.point == 1, objects)))
+        wrong_count = len(list(filter(lambda x: x.point == -3, objects)))
+        even_count = len(list(filter(lambda x: x.point == 0, objects)))
+
+        radar_data = [right_count, first_count, wrong_count, even_count]
+
+        return {"radar_data": radar_data, "point_stats": point_stats}

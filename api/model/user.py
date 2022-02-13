@@ -22,64 +22,78 @@ CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
 # firstly set "0" in the seed.
 # sequence = db.Table('sequence', db.Column('id', Integer, nullable=False))
 
+# class ResponseStats(db.Model):
+#     id = Column(Integer, primary_key=True)
+#     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
+#     total_rank = Column(Integer, default=None)
+#     total_response = Column(Integer, default=None)
+#     month_rank = Column(Integer, default=None)
+#     month_response = Column(Integer, default=None)
+#     week_rank = Column(Integer, default=None)
+#     week_response = Column(Integer, default=None)
+#
+#     def to_dict(self) -> dict:
+#         return {
+#             "id": self.id,
+#             "user_id": self.user_id,
+#             "total_rank": self.total_rank,
+#             "month_rank": self.month_rank,
+#             "week_rank": self.week_rank,
+#             "total_response": self.total_response,
+#             "month_response": self.month_response,
+#             "week_response": self.week_response,
+#         }
+#
+#     @classmethod
+#     def find_by_user_id(cls, user_id: int) -> "ResponseStats":
+#         return cls.query.filter_by(user_id=user_id).first()
 
-class Stats(db.Model):
+
+class PointStats(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
-
-    # point (get from Point Table)
-    total_rank_point = Column(Integer, default=None)
-    total_point = Column(Integer, default=None)
-    month_rank_point = Column(Integer, default=None)
+    total_rank = Column(Integer, nullable=False)
+    total_point = Column(Integer, nullable=False)
+    month_rank = Column(Integer, default=None)
     month_point = Column(Integer, default=None)
-    week_rank_point = Column(Integer, default=None)
+    week_rank = Column(Integer, default=None)
     week_point = Column(Integer, default=None)
-
-    # response (get from Response table)
-    total_rank_response = Column(Integer, default=None)
-    total_response = Column(Integer, default=None)
-    month_rank_response = Column(Integer, default=None)
-    month_response = Column(Integer, default=None)
-    week_rank_response = Column(Integer, default=None)
-    week_response = Column(Integer, default=None)
-
-    # questions (get from Questions table)
-    total_questions = Column(Integer, default=None)
-    week_questions = Column(Integer, default=None)
-    month_questions = Column(Integer, default=None)
-
-    # answers (get from Point table)
-    total_answers = Column(Integer, default=None)
-    week_answers = Column(Integer, default=None)
-    month_answers = Column(Integer, default=None)
 
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "total_rank_point": self.total_rank_point,
+            "total_rank": self.total_rank,
+            "month_rank": self.month_rank,
+            "week_rank": self.week_rank,
             "total_point": self.total_point,
-            "month_rank_point": self.month_rank_point,
             "month_point": self.month_point,
-            "week_rank_point": self.week_rank_point,
             "week_point": self.week_point,
-            "total_rank_response": self.total_rank_response,
-            "total_response": self.total_response,
-            "month_rank_response": self.month_rank_response,
-            "month_response": self.month_response,
-            "week_rank_response": self.week_rank_response,
-            "week_response": self.week_response,
-            "total_questions": self.total_questions,
-            "week_questions": self.week_questions,
-            "month_questions": self.month_questions,
-            "total_answers": self.total_questions,
-            "week_answers": self.week_answers,
-            "month_answers": self.month_answers,
         }
 
     @classmethod
-    def find_by_user_id(cls, user_id: int) -> "Stats":
+    def find_by_user_id(cls, user_id: int) -> "PointStats":
         return cls.query.filter_by(user_id=user_id).first()
+
+    # must be exists.
+    @property
+    def get_total(self) -> list:
+        result = [self.total_rank, self.total_point]
+        return result
+
+    @property
+    def get_month(self) -> list or None:
+        result = [self.month_rank, self.month_point]
+        if not result[0] or not result[1]:
+            return None
+        return result
+
+    @property
+    def get_week(self) -> list or None:
+        result = [self.week_rank, self.week_point]
+        if not result[0] or not result[1]:
+            return None
+        return result
 
 
 class User(db.Model):
@@ -125,7 +139,8 @@ class User(db.Model):
             "role": self.role
         }
 
-    stats = db.relationship('Stats', backref="user", lazy=True, cascade='all, delete-orphan')
+    point_stats = db.relationship('PointStats', backref="user", lazy="dynamic", cascade='all, delete-orphan')
+    # response_stats = db.relationship('ResponseStats', backref="user", lazy="dynamic", cascade='all, delete-orphan')
 
     confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
     update_emails = db.relationship('UpdateEmail', backref='user', lazy="dynamic",

@@ -7,7 +7,7 @@ from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
-from api.model.aggregate import point, response
+from api.model.aggregate import point
 from api.model.enum.enums import AnswerResultPoint
 from api.model.others import Question, answer, Notification
 from api.model.user import User
@@ -179,10 +179,10 @@ class QuestionsAnswer(Resource):
         db.session.execute(insert_point)
 
         # create response
-        insert_response = response.insert().values(
-            user_id=question.user_id,
-        )
-        db.session.execute(insert_response)
+        # insert_response = response.insert().values(
+        #     user_id=question.user_id,
+        # )
+        # db.session.execute(insert_response)
 
         # create notifications
         current_user.create_answer_notification(question)
