@@ -44,11 +44,13 @@ class QuestionIndex(Resource):
     @jwt_required()
     def get(self):
         page = int(request.args.get('page'))
+        if not page:
+            return {"message": "Bad Request."}, 400
 
         base_query = db.session.query(Question, User) \
             .join(User) \
             .order_by(Question.id.desc()) \
-            .paginate(page=page, per_page=20, error_out=False)
+            .paginate(page=page, per_page=15, error_out=False)
 
         # get pages and questions.
         total_pages = base_query.pages
@@ -178,12 +180,6 @@ class QuestionsAnswer(Resource):
         )
         db.session.execute(insert_point)
 
-        # create response
-        # insert_response = response.insert().values(
-        #     user_id=question.user_id,
-        # )
-        # db.session.execute(insert_response)
-
         # create notifications
         current_user.create_answer_notification(question)
 
@@ -240,13 +236,13 @@ class QuestionOwner(Resource):
         ]
 
         # answered users
-        objects = db.session.query(User, answer) \
+        objects = db.session.query(User, answer.c.is_yes.label("is_yes")) \
             .join(answer, answer.c.user_id == User.id) \
             .filter(answer.c.question_id == question_id) \
             .order_by(answer.c.created_at.desc()) \
             .all()
         users = list(map(lambda x: x.User.to_dict() | {
-            "is_yes": x[3]
+            "is_yes": x.is_yes
         }, objects))
 
         return {"pie_chart_data": pie_chart_data, "users": users}

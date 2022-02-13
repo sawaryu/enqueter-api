@@ -70,16 +70,22 @@ class UserQuestions(Resource):
 class UserQuestionsAnswered(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get answered questions by user_id'
+        description='Get answered questions by user_id',
+        params={'page': {'type': 'str'}}
     )
     @jwt_required()
     def get(self, user_id):
+        page = int(request.args.get('page'))
+        if not page:
+            return {"message": "Bad Request."}, 400
+
         objects = db.session.query(Question, User) \
             .join(answer, answer.c.question_id == Question.id) \
             .filter(answer.c.user_id == user_id) \
             .join(User, User.id == Question.user_id) \
             .order_by(answer.c.created_at.desc()) \
-            .all()
+            .paginate(page=page, per_page=15, error_out=False) \
+            .items
 
         return list(map(lambda x: x.Question.to_dict() | {
             "user": x.User.to_dict()
@@ -313,42 +319,33 @@ class UserRanking(Resource):
     @user_ns.doc(
         security='jwt_auth',
         description='Get the users ranking top 50 (by pt) and logged_in_user rank info',
-        params={'period': {'type': 'str', 'enum': ['week', 'month', 'all']}}
+        params={'period': {'type': 'str', 'enum': ['week', 'month', 'total']}}
     )
     @jwt_required()
     def get(self):
         period = request.args.get("period")
-        current_user_stats = current_user.point_stats.first()
 
         if period == "week":
             select_query = [PointStats.week_rank, PointStats.week_point]
             sub_query = PointStats.week_point.desc()
-            if current_user_stats:
-                current_user_stats = current_user_stats.get_week
         elif period == "month":
             select_query = [PointStats.month_rank, PointStats.month_point]
             sub_query = PointStats.month_point.desc()
-            if current_user_stats:
-                current_user_stats = current_user_stats.get_month
         else:  # all
             select_query = [PointStats.total_rank, PointStats.total_point]
             sub_query = PointStats.total_point.desc()
-            if current_user_stats:
-                current_user_stats = current_user_stats.get_total
 
         objects = db.session.query(select_query[0].label("rank"), select_query[1].label("point"), User) \
             .join(User, User.id == PointStats.user_id) \
             .order_by(sub_query) \
             .order_by(User.id.desc()) \
-            .limit(50) \
+            .limit(30) \
             .all()
 
-        users = list(map(lambda x: x.User.to_dict() | {
+        return list(map(lambda x: x.User.to_dict() | {
             "rank": x.rank,
             "point": x.point
         }, objects))
-
-        return {"users": users, "current_user_stats": current_user_stats}, 200
 
 
 @user_ns.route('/<user_id>/stats')
@@ -356,7 +353,7 @@ class UserStats(Resource):
     @user_ns.doc(
         security='jwt_auth',
         description='Get the user stats by user_id.',
-        params={'period': {'type': 'str', 'enum': ['week', 'month', 'all']}}
+        params={'period': {'type': 'str', 'enum': ['week', 'month', 'total']}}
     )
     @jwt_required()
     def get(self, user_id):

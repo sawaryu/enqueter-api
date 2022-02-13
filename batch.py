@@ -95,11 +95,11 @@ def step_1() -> None:
         stats = PointStats.find_by_user_id(r["user_id"])
         # update
         if stats:
-            stats.total_rank_point = r["total_rank"]
+            stats.total_rank = r["total_rank"]
             stats.total_point = r["total_point"]
-            stats.month_rank_point = r["month_rank"]
+            stats.month_rank = r["month_rank"]
             stats.month_point = r["month_point"]
-            stats.week_rank_point = r["week_rank"]
+            stats.week_rank = r["week_rank"]
             stats.week_point = r["week_point"]
         # create
         else:

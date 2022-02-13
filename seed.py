@@ -3,6 +3,7 @@ from time import time
 from faker import Faker
 from sqlalchemy import text
 
+from api.model.aggregate import point
 from api.model.confirmation import Confirmation
 from api.model.enum.enums import UserRole
 from api.model.others import Question
@@ -29,9 +30,9 @@ def main():
             db.create_all()
             app.logger.info("Done drop and create tables. And starting create seed date.")
 
-            """Create users"""
+            """Create users *(range(1, 11) > 1~10)"""
             faker_gen = Faker()
-            for n in range(1, 11):
+            for n in range(1, 101):
                 n = str(n)
                 nickname = ""
                 while not nickname:
@@ -60,10 +61,17 @@ def main():
                 db.session.add(confirmation)
                 db.session.flush()
 
+                # inset point
+                insert_point = point.insert().values(
+                    user_id=user.id,
+                    point=3
+                )
+                db.session.execute(insert_point)
+
             """Create user relationships"""
             first_user = User.query.filter_by(id=1).first()
-            for n in range(1, 10):
-                target_user = User.query.filter_by(id=n + 1).first()
+            target_users = User.query.all()
+            for target_user in target_users:
                 first_user.follow(target_user)
                 target_user.follow(first_user)
                 db.session.flush()
