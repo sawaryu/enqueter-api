@@ -20,6 +20,7 @@ def batch_execute(message: str) -> None:
     app.logger.info("--- START ---")
     db.session.begin()
     try:
+        step_0()
         step_1()
         # ..another steps if exists.
         db.session.commit()
@@ -33,7 +34,14 @@ def batch_execute(message: str) -> None:
         app.logger.info("--- END ---")
 
 
-def step_1():
+def step_0() -> None:
+    """Delete non active users"""
+    User.query.filter_by(is_deleted=True).delete()
+    db.session.flush()
+    app.logger.info("Successfully deleted non active users.")
+
+
+def step_1() -> None:
     """
     Firstly Aggregate data.
     """

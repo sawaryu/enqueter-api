@@ -5,7 +5,7 @@ from time import time
 
 from flask import Response, render_template
 from flask_jwt_extended import current_user
-from sqlalchemy import String, Integer, Column, DateTime, Enum, ForeignKey
+from sqlalchemy import String, Integer, Column, DateTime, Enum, ForeignKey, Boolean
 from werkzeug.security import generate_password_hash
 
 from api.libs.mailgun import MailGun
@@ -85,6 +85,9 @@ class User(db.Model):
     avatar = Column(String(255), nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
+
+    # is_deleted
+    is_deleted = Column(Boolean, nullable=False, default=False)
 
     def __init__(self, username: str, email: str, nickname: str, password: str, **kwargs):
         super().__init__(**kwargs)

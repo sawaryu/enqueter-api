@@ -140,8 +140,8 @@ class AuthBasic(Resource):
                 Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
             )
 
-        # delete the current_user and revoke jwt.
-        db.session.delete(current_user)
+        # change True the current_user deleted flag, and revoke jwt.
+        current_user.is_deleted = True
         jti = get_jwt()["jti"]
         now = datetime.now(timezone.utc)
         db.session.add(TokenBlocklist(jti=jti, created_at=now))
@@ -168,7 +168,7 @@ class AuthLogin(Resource):
         elif re.fullmatch(email_regex, identify):
             user = User.query.filter_by(email=identify).one_or_none()
 
-        if user and check_password_hash(user.password, params['password']):
+        if user and not user.is_deleted and check_password_hash(user.password, params['password']):
             confirmation = user.most_recent_confirmation
             if confirmation and confirmation.confirmed:
                 access_token = create_access_token(identity=user)
