@@ -186,7 +186,7 @@ class QuestionsAnswer(Resource):
         # commit
         db.session.commit()
 
-        return {"result": result_point}
+        return result_point
 
 
 # common question info
