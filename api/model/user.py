@@ -89,13 +89,13 @@ class User(db.Model):
     # is_deleted
     is_deleted = Column(Boolean, nullable=False, default=False)
 
-    def __init__(self, username: str, email: str, nickname: str, password: str, **kwargs):
+    def __init__(self, username: str, email: str, password: str, **kwargs):
         super().__init__(**kwargs)
         self.username = username
         self.email = email
         self.password = generate_password_hash(password, method='sha256')
-        self.nickname = nickname
-        self.nickname_replaced = nickname.replace(' ', '').replace('　', '')
+        self.nickname = username
+        self.nickname_replaced = username.replace(' ', '').replace('　', '')
         self.avatar = f"egg_{randrange(1, 11)}.png"
 
     def to_dict(self) -> dict:

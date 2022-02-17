@@ -32,7 +32,6 @@ nickname_regex = r'\S'
 signup = auth_ns.model('AuthSignup', {
     'username': fields.String(pattern=username_regex, required=True),
     'email': fields.String(pattern=email_regex, required=True),
-    'nickname': fields.String(min_length=1, max_length=20, pattern=nickname_regex, required=True),
     'password': fields.String(pattern=password_regex, required=True)
 })
 
@@ -88,7 +87,6 @@ class AuthBasic(Resource):
             username=params['username'],
             email=params["email"],
             password=params["password"],
-            nickname=params["nickname"]
         )
 
         try:

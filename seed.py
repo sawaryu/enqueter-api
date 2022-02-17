@@ -34,12 +34,12 @@ def main():
             faker_gen = Faker()
             for n in range(1, 101):
                 n = str(n)
-                nickname = ""
-                while not nickname:
-                    faker_name = faker_gen.name()
-                    if len(faker_name) <= 20:
-                        nickname = faker_name
-                        break
+                # nickname = ""
+                # while not nickname:
+                #     faker_name = faker_gen.name()
+                #     if len(faker_name) <= 20:
+                #         nickname = faker_name
+                #         break
                 username = f'sample{n + n}'
                 email = f"sample{n}@sample.com"
                 password = 'passpass'
@@ -49,7 +49,6 @@ def main():
                 user = User(
                     username=username,
                     email=email,
-                    nickname=nickname,
                     password=password,
                 )
                 user.introduce = introduce
