@@ -2,13 +2,15 @@ from datetime import datetime
 from time import time
 
 from flask_jwt_extended import current_user
-from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Boolean
+from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Enum
+
+from api.model.enum.enums import QuestionOption
 from database import db
 
 answer = db.Table('answer',
                   db.Column('user_id', Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False),
                   db.Column('question_id', Integer, ForeignKey('question.id', ondelete="CASCADE"), nullable=False),
-                  db.Column('is_yes', Boolean, nullable=False),
+                  db.Column('option', Enum(QuestionOption), nullable=False),
                   db.Column('created_at', DateTime, nullable=False, default=datetime.now()),
                   UniqueConstraint('user_id', 'question_id', name='answer_unique_key')
                   )
@@ -25,13 +27,17 @@ class Question(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     content = Column(String(140), nullable=False)
+    option_first = Column(String(15), nullable=False)
+    option_second = Column(String(15), nullable=False)
     closed_at = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
 
-    def __init__(self, user_id: int, content: str, **kwargs):
+    def __init__(self, user_id: int, content: str, option_first: str, option_second: str, **kwargs):
         super().__init__(**kwargs)
         self.user_id = user_id
         self.content = content
+        self.option_first = option_first
+        self.option_second = option_second
         self.closed_at = int(time()) + 604800  # 1 week
 
     answered_users = db.relationship(
@@ -47,6 +53,8 @@ class Question(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "content": self.content,
+            "option_first": self.option_first,
+            "option_second": self.option_second,
             "closed_at": str(self.closed_at),
             "created_at": str(self.created_at),
             "is_open": self.is_open,

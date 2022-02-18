@@ -8,7 +8,7 @@ from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
 from api.model.aggregate import point
-from api.model.enum.enums import AnswerResultPoint
+from api.model.enum.enums import AnswerResultPoint, QuestionOption
 from api.model.others import Notification
 from api.model.question import Question, answer
 from api.model.user import User
@@ -18,6 +18,8 @@ question_ns = Namespace('/questions')
 
 questionCreate = question_ns.model('QuestionCreate', {
     'content': fields.String(required=True, max_length=140, pattern=r'\S'),
+    'option_first': fields.String(required=True, max_length=10, pattern=r'\S'),
+    'option_second': fields.String(required=True, max_length=10, pattern=r'\S')
 })
 
 questionDelete = question_ns.model('QuestionDelete', {
@@ -30,7 +32,7 @@ bookmarkCreateOrDelete = question_ns.model('BookmarkCreate', {
 
 answerCreateModel = question_ns.model('BookmarkCreate', {
     'question_id': fields.Integer(required=True),
-    'is_yes': fields.Boolean(required=True)
+    'option': fields.String(required=True, enum=QuestionOption.get_value_list())
 })
 
 
@@ -73,18 +75,18 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def post(self):
-        questions = current_user.questions.all()
-        if questions and (questions[0].created_at + timedelta(minutes=3)) > datetime.now():
+        latest_question: Question = current_user.questions.first()
+        if latest_question and (latest_question.created_at + timedelta(minutes=3)) > datetime.now():
             return {
                        "status": 400,
                        "message": "Not yet passed 3 minutes from latest question you created."
                    }, 400
 
-        content = request.json['content']
-
         question = Question(
             user_id=current_user.id,
-            content=content
+            content=request.json['content'],
+            option_first=request.json['option_first'],
+            option_second=request.json['option_second']
         )
 
         db.session.add(question)
@@ -128,10 +130,8 @@ class QuestionsAnswer(Resource):
         question: Question = Question.query.filter_by(id=params["question_id"]).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
-
         if not question.is_open:
             return {"status": 409, "message": "The questions had been closed already."}, 409
-
         if question.user_id == current_user.id or current_user.is_answered_question(question):
             return {"status": 400, "message": "Bad request"}, 400
 
@@ -140,28 +140,28 @@ class QuestionsAnswer(Resource):
             result_point: int = AnswerResultPoint.FIRST.value
 
         else:
-            yes_count: int = len(db.session.query(answer)
-                                 .filter(answer.c.question_id == params["question_id"])
-                                 .filter(answer.c.is_yes == 1)
-                                 .all())
+            first_count: int = len(db.session.query(answer)
+                                   .filter(answer.c.question_id == params["question_id"])
+                                   .filter(answer.c.option == QuestionOption.first.value)
+                                   .all())
 
-            no_count: int = len(db.session.query(answer)
-                                .filter(answer.c.question_id == params["question_id"])
-                                .filter(answer.c.is_yes == 0)
-                                .all())
-            if request.json["is_yes"]:
-                yes_count += 1
-                if yes_count == no_count:
+            second_count: int = len(db.session.query(answer)
+                                    .filter(answer.c.question_id == params["question_id"])
+                                    .filter(answer.c.option == QuestionOption.second.value)
+                                    .all())
+            if params["option"] == QuestionOption.first.value:
+                first_count += 1
+                if first_count == second_count:
                     result_point = AnswerResultPoint.EVEN.value
-                elif yes_count > no_count:
+                elif first_count > second_count:
                     result_point = AnswerResultPoint.RIGHT.value
                 else:
                     result_point = AnswerResultPoint.WRONG.value
             else:
-                no_count += 1
-                if yes_count == no_count:
+                second_count += 1
+                if first_count == second_count:
                     result_point = AnswerResultPoint.EVEN.value
-                elif no_count > yes_count:
+                elif second_count > first_count:
                     result_point = AnswerResultPoint.RIGHT.value
                 else:
                     result_point = AnswerResultPoint.WRONG.value
@@ -170,7 +170,7 @@ class QuestionsAnswer(Resource):
         insert_answer = answer.insert().values(
             user_id=current_user.id,
             question_id=question.id,
-            is_yes=params["is_yes"],
+            option=params["option"],
         )
         db.session.execute(insert_answer)
 
@@ -224,29 +224,31 @@ class QuestionOwner(Resource):
                 and not current_user.is_answered_question(question):
             return {"status": 403, "message": "Forbidden"}, 403
 
-        # pie_chart_data
-        pie_chart_data = [
-            len(db.session.query(answer)
-                .filter(answer.c.question_id == question_id)
-                .filter(answer.c.is_yes == 0)
-                .all()),
-            len(db.session.query(answer)
-                .filter(answer.c.question_id == question_id)
-                .filter(answer.c.is_yes == 1)
-                .all())
-        ]
+        # Aggregate each options count.
+        first_count: int = len(db.session.query(answer)
+                               .filter(answer.c.question_id == question_id)
+                               .filter(answer.c.option == QuestionOption.first.value)
+                               .all())
 
-        # answered users
-        objects = db.session.query(User, answer.c.is_yes.label("is_yes")) \
+        second_count: int = len(db.session.query(answer)
+                                .filter(answer.c.question_id == question_id)
+                                .filter(answer.c.option == QuestionOption.second.value)
+                                .all())
+
+        count_data = [first_count, second_count]
+
+        # Get answered users and their options.
+        objects = db.session.query(User, answer.c.option.label("option")) \
             .join(answer, answer.c.user_id == User.id) \
             .filter(answer.c.question_id == question_id) \
             .order_by(answer.c.created_at.desc()) \
             .all()
+
         users = list(map(lambda x: x.User.to_dict() | {
-            "is_yes": x.is_yes
+            "option": x.option
         }, objects))
 
-        return {"pie_chart_data": pie_chart_data, "users": users}
+        return {"count_data": count_data, "users": users}, 200
 
 
 @question_ns.route('/next')

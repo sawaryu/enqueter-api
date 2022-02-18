@@ -21,7 +21,6 @@ def main():
             app.logger.info("Session begin.")
             db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
             db.session.commit()
-            # db.drop_all()
             meta = db.metadata
             for tbl in reversed(meta.sorted_tables):
                 app.logger.info(f'{tbl} dropped.')
@@ -34,12 +33,6 @@ def main():
             faker_gen = Faker()
             for n in range(1, 101):
                 n = str(n)
-                # nickname = ""
-                # while not nickname:
-                #     faker_name = faker_gen.name()
-                #     if len(faker_name) <= 20:
-                #         nickname = faker_name
-                #         break
                 username = f'sample{n + n}'
                 email = f"sample{n}@sample.com"
                 password = 'passpass'
@@ -78,9 +71,13 @@ def main():
             """Create closed questions"""
             for n in range(1, 7):
                 content = faker_gen.address() + "?"
+                option_first = "option1"
+                option_second = "option2"
                 question = Question(
                     content=content,
-                    user_id=n
+                    user_id=n,
+                    option_first=option_first,
+                    option_second=option_second
                 )
                 question.closed_at = time()
                 db.session.add(question)
@@ -90,9 +87,13 @@ def main():
             for n in range(1, 7):
                 for n_2 in range(1, 15):
                     content = faker_gen.address() + "?"
+                    option_first = "option1"
+                    option_second = "option2"
                     question = Question(
                         content=content,
-                        user_id=n
+                        user_id=n,
+                        option_first=option_first,
+                        option_second=option_second
                     )
                     db.session.add(question)
                     db.session.flush()
