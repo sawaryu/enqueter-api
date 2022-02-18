@@ -8,7 +8,8 @@ from sqlalchemy import func
 
 from api.model.aggregate import point
 from api.model.enum.enums import NotificationCategory
-from api.model.others import SearchHistory, Question, bookmark, answer, Notification, user_relationship
+from api.model.others import SearchHistory, Notification, user_relationship
+from api.model.question import Question, answer, bookmark
 from api.model.user import User, PointStats
 from database import db
 

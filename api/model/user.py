@@ -12,8 +12,8 @@ from api.libs.mailgun import MailGun
 from api.model.confirmation import Confirmation, UpdateEmail
 
 from api.model.enum.enums import UserRole, NotificationCategory
-from api.model.others import Notification, bookmark, answer, \
-    user_relationship
+from api.model.others import Notification, user_relationship
+from api.model.question import answer, bookmark
 from database import db
 
 CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes

@@ -9,7 +9,8 @@ from sqlalchemy import func
 
 from api.model.aggregate import point
 from api.model.enum.enums import AnswerResultPoint
-from api.model.others import Question, answer, Notification
+from api.model.others import Notification
+from api.model.question import Question, answer
 from api.model.user import User
 from database import db
 

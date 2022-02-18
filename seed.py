@@ -6,7 +6,7 @@ from sqlalchemy import text
 from api.model.aggregate import point
 from api.model.confirmation import Confirmation
 from api.model.enum.enums import UserRole
-from api.model.others import Question
+from api.model.question import Question
 from api.model.user import User
 from app import app
 from database import db

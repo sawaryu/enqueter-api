@@ -16,8 +16,8 @@ $ flask batch_execute "Batch job starting..."
 
 @app.cli.command('batch_execute')
 @click.argument('message')
-def batch_execute(message: str) -> None:
-    app.logger.info("--- START ---")
+def batch_execute(message: str = "default") -> None:
+    app.logger.info(f"--- START message:{message} ---")
     db.session.begin()
     try:
         step_0()
