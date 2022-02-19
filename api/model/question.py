@@ -24,6 +24,8 @@ bookmark = db.Table('bookmark',
 
 
 class Question(db.Model):
+    """QuestionModel
+    """
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     content = Column(String(140), nullable=False)

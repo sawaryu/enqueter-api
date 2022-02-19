@@ -22,6 +22,7 @@ def batch_execute(message: str = "default") -> None:
     try:
         step_0()
         step_1()
+        step_2()
         # ..another steps if exists.
         db.session.commit()
         app.logger.info("Successfully finished all steps.")
@@ -107,3 +108,7 @@ def step_1() -> None:
             db.session.add(stats)
         db.session.flush()
     app.logger.info("Successfully finished Step1.")
+
+
+def step_2() -> None:
+    pass

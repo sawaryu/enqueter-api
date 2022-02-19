@@ -46,7 +46,7 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def get(self):
-        page = int(request.args.get('page'))
+        page: int = int(request.args.get('page'))
         if not page:
             return {"message": "Bad Request."}, 400
 
@@ -102,8 +102,8 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def delete(self):
-        question_id = request.json['question_id']
-        question = Question.query.filter_by(id=question_id).first()
+        question_id: int = request.json['question_id']
+        question: Question = Question.query.filter_by(id=question_id).first()
         if not question or not question.user_id == current_user.id:
             return {"status": 401, "message": "Unauthorized"}, 401
 
@@ -199,7 +199,7 @@ class QuestionShow(Resource):
     )
     @jwt_required()
     def get(self, question_id):
-        question = Question.query.filter_by(id=question_id).first()
+        question: Question or None = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
 
@@ -217,7 +217,7 @@ class QuestionOwner(Resource):
     )
     @jwt_required()
     def get(self, question_id):
-        question = Question.query.filter_by(id=question_id).first()
+        question: Question or None = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
         elif question.is_open and not question.user_id == current_user.id \
@@ -235,16 +235,16 @@ class QuestionOwner(Resource):
                                 .filter(answer.c.option == QuestionOption.second.value)
                                 .all())
 
-        count_data = [first_count, second_count]
+        count_data: list = [first_count, second_count]
 
         # Get answered users and their options.
-        objects = db.session.query(User, answer.c.option.label("option")) \
+        objects: list = db.session.query(User, answer.c.option.label("option")) \
             .join(answer, answer.c.user_id == User.id) \
             .filter(answer.c.question_id == question_id) \
             .order_by(answer.c.created_at.desc()) \
             .all()
 
-        users = list(map(lambda x: x.User.to_dict() | {
+        users: list = list(map(lambda x: x.User.to_dict() | {
             "option": x.option
         }, objects))
 
@@ -260,18 +260,18 @@ class QuestionNext(Resource):
     )
     @jwt_required()
     def get(self):
-        answered_question_ids = list(map(lambda x: x.id, current_user.answered_questions))
-        owner_question_ids = list(map(lambda x: x.id, current_user.questions))
+        answered_question_ids: list[int] = list(map(lambda x: x.id, current_user.answered_questions))
+        owner_question_ids: list[int] = list(map(lambda x: x.id, current_user.questions))
 
-        question = Question.query \
+        question: Question or None = Question.query \
             .filter(Question.closed_at > time()) \
             .filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
             .order_by(func.rand()) \
             .limit(1) \
             .first()
         if not question:
-            return {"status": 200, "message": "none", "data": None}
-        return {"status": 200, "message": "ok", "data": question.id}
+            return {"message": "none", "data": None}, 200
+        return {"message": "ok", "data": question.id}, 200
 
 
 @question_ns.route('/timeline')
@@ -340,9 +340,9 @@ class QuestionBookmark(Resource):
     )
     @jwt_required()
     def delete(self):
-        question_id = request.json["question_id"]
+        question_id: int = request.json["question_id"]
 
-        question = Question.query.filter_by(id=question_id).first()
+        question: Question or None = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 400, "message": "bad request"}, 400
 

@@ -19,54 +19,10 @@ from database import db
 CONFIRMATION_EXPIRE_DELTA = 1800  # 30minutes
 
 
-class PointStats(db.Model):
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
-    total_rank = Column(Integer, nullable=False)
-    total_point = Column(Integer, nullable=False)
-    month_rank = Column(Integer, default=None)
-    month_point = Column(Integer, default=None)
-    week_rank = Column(Integer, default=None)
-    week_point = Column(Integer, default=None)
-
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "total_rank": self.total_rank,
-            "month_rank": self.month_rank,
-            "week_rank": self.week_rank,
-            "total_point": self.total_point,
-            "month_point": self.month_point,
-            "week_point": self.week_point,
-        }
-
-    @classmethod
-    def find_by_user_id(cls, user_id: int) -> "PointStats":
-        return cls.query.filter_by(user_id=user_id).first()
-
-    # must be exists.
-    @property
-    def get_total(self) -> list:
-        result = [self.total_rank, self.total_point]
-        return result
-
-    @property
-    def get_month(self) -> list or None:
-        result = [self.month_rank, self.month_point]
-        if not result[0] or not result[1]:
-            return None
-        return result
-
-    @property
-    def get_week(self) -> list or None:
-        result = [self.week_rank, self.week_point]
-        if not result[0] or not result[1]:
-            return None
-        return result
-
-
 class User(db.Model):
+    """UserModel
+    Most central resource in this app.
+    """
     # basic
     id = Column(Integer, primary_key=True)
     username = Column(String(15), nullable=False, unique=True)
@@ -303,3 +259,53 @@ class User(db.Model):
                 filter(
                     lambda x: x.passive_id == user_id and x.category == category and x.question_id == question_id,
                     self.active_notifications))
+
+
+class PointStats(db.Model):
+    """PointStats
+    Mainly for all users ranking, that is aggregated by batch.
+    """
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
+    total_rank = Column(Integer, nullable=False)
+    total_point = Column(Integer, nullable=False)
+    month_rank = Column(Integer, default=None)
+    month_point = Column(Integer, default=None)
+    week_rank = Column(Integer, default=None)
+    week_point = Column(Integer, default=None)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "total_rank": self.total_rank,
+            "month_rank": self.month_rank,
+            "week_rank": self.week_rank,
+            "total_point": self.total_point,
+            "month_point": self.month_point,
+            "week_point": self.week_point,
+        }
+
+    @classmethod
+    def find_by_user_id(cls, user_id: int) -> "PointStats":
+        return cls.query.filter_by(user_id=user_id).first()
+
+    # must be exists.
+    @property
+    def get_total(self) -> list:
+        result = [self.total_rank, self.total_point]
+        return result
+
+    @property
+    def get_month(self) -> list or None:
+        result = [self.month_rank, self.month_point]
+        if not result[0] or not result[1]:
+            return None
+        return result
+
+    @property
+    def get_week(self) -> list or None:
+        result = [self.week_rank, self.week_point]
+        if not result[0] or not result[1]:
+            return None
+        return result
