@@ -18,8 +18,8 @@ question_ns = Namespace('/questions')
 
 questionCreate = question_ns.model('QuestionCreate', {
     'content': fields.String(required=True, max_length=140, pattern=r'\S'),
-    'option_first': fields.String(required=True, max_length=10, pattern=r'\S'),
-    'option_second': fields.String(required=True, max_length=10, pattern=r'\S')
+    'option_first': fields.String(required=True, max_length=15, pattern=r'\S'),
+    'option_second': fields.String(required=True, max_length=15, pattern=r'\S')
 })
 
 questionDelete = question_ns.model('QuestionDelete', {
