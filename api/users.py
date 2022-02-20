@@ -10,7 +10,7 @@ from api.model.aggregate import point
 from api.model.enum.enums import NotificationCategory
 from api.model.others import SearchHistory, Notification, user_relationship
 from api.model.question import Question, answer, bookmark
-from api.model.user import User, PointStats
+from api.model.user import User, PointStats, ResponseStats
 from database import db
 
 user_ns = Namespace('/users')
@@ -315,11 +315,11 @@ class UsersSearchHistoryShow(Resource):
         }
 
 
-@user_ns.route('/ranking')
-class UserRanking(Resource):
+@user_ns.route('/point_ranking')
+class UserPointRanking(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get the users ranking top 50 (by pt) and logged_in_user rank info',
+        description='Get the users ranking top 50 (by pt).',
         params={'period': {'type': 'str', 'enum': ['week', 'month', 'total']}}
     )
     @jwt_required()
@@ -328,13 +328,13 @@ class UserRanking(Resource):
 
         if period == "week":
             select_query = [PointStats.week_rank, PointStats.week_point]
-            sub_query = PointStats.week_point.desc()
+            sub_query = PointStats.week_rank.asc()
         elif period == "month":
             select_query = [PointStats.month_rank, PointStats.month_point]
-            sub_query = PointStats.month_point.desc()
+            sub_query = PointStats.month_rank.asc()
         else:  # all
             select_query = [PointStats.total_rank, PointStats.total_point]
-            sub_query = PointStats.total_point.desc()
+            sub_query = PointStats.total_rank.asc()
 
         objects = db.session.query(select_query[0].label("rank"), select_query[1].label("point"), User) \
             .join(User, User.id == PointStats.user_id) \
@@ -346,6 +346,40 @@ class UserRanking(Resource):
         return list(map(lambda x: x.User.to_dict() | {
             "rank": x.rank,
             "point": x.point
+        }, objects))
+
+
+@user_ns.route('/response_ranking')
+class UserResponseRanking(Resource):
+    @user_ns.doc(
+        security='jwt_auth',
+        description='Get the users ranking top 50 (by response).',
+        params={'period': {'type': 'str', 'enum': ['week', 'month', 'total']}}
+    )
+    @jwt_required()
+    def get(self):
+        period = request.args.get("period")
+
+        if period == "week":
+            select_query = [ResponseStats.week_rank, ResponseStats.week_response]
+            sub_query = ResponseStats.week_rank.asc()
+        elif period == "month":
+            select_query = [ResponseStats.month_rank, ResponseStats.month_response]
+            sub_query = ResponseStats.month_rank.asc()
+        else:  # all
+            select_query = [ResponseStats.total_rank, ResponseStats.total_response]
+            sub_query = ResponseStats.total_rank.asc()
+
+        objects = db.session.query(select_query[0].label("rank"), select_query[1].label("response"), User) \
+            .join(User, User.id == ResponseStats.user_id) \
+            .order_by(sub_query) \
+            .order_by(User.id.desc()) \
+            .limit(30) \
+            .all()
+
+        return list(map(lambda x: x.User.to_dict() | {
+            "rank": x.rank,
+            "response": x.response
         }, objects))
 
 

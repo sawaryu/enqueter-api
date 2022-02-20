@@ -29,3 +29,12 @@ class AnswerResultPoint(enum.IntEnum):
     @classmethod
     def get_value_list(cls):
         return list(map(lambda x: x.value, cls))
+
+
+class QuestionOption(str, enum.Enum):
+    first = "first"
+    second = "second"
+
+    @classmethod
+    def get_value_list(cls):
+        return list(map(lambda x: x.value, cls))

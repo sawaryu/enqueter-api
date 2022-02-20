@@ -7,8 +7,8 @@ from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
-from api.model.aggregate import point
-from api.model.enum.enums import AnswerResultPoint
+from api.model.aggregate import point, response
+from api.model.enum.enums import AnswerResultPoint, QuestionOption
 from api.model.others import Notification
 from api.model.question import Question, answer
 from api.model.user import User
@@ -18,6 +18,8 @@ question_ns = Namespace('/questions')
 
 questionCreate = question_ns.model('QuestionCreate', {
     'content': fields.String(required=True, max_length=140, pattern=r'\S'),
+    'option_first': fields.String(required=True, max_length=15, pattern=r'\S'),
+    'option_second': fields.String(required=True, max_length=15, pattern=r'\S')
 })
 
 questionDelete = question_ns.model('QuestionDelete', {
@@ -30,11 +32,10 @@ bookmarkCreateOrDelete = question_ns.model('BookmarkCreate', {
 
 answerCreateModel = question_ns.model('BookmarkCreate', {
     'question_id': fields.Integer(required=True),
-    'is_yes': fields.Boolean(required=True)
+    'option': fields.String(required=True, enum=QuestionOption.get_value_list())
 })
 
 
-# TODO
 @question_ns.route('')
 class QuestionIndex(Resource):
     @question_ns.doc(
@@ -44,7 +45,7 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def get(self):
-        page = int(request.args.get('page'))
+        page: int = int(request.args.get('page'))
         if not page:
             return {"message": "Bad Request."}, 400
 
@@ -73,18 +74,18 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def post(self):
-        questions = current_user.questions.all()
-        if questions and (questions[0].created_at + timedelta(minutes=3)) > datetime.now():
+        latest_question: Question = current_user.questions.first()
+        if latest_question and (latest_question.created_at + timedelta(minutes=3)) > datetime.now():
             return {
                        "status": 400,
                        "message": "Not yet passed 3 minutes from latest question you created."
                    }, 400
 
-        content = request.json['content']
-
         question = Question(
             user_id=current_user.id,
-            content=content
+            content=request.json['content'],
+            option_first=request.json['option_first'],
+            option_second=request.json['option_second']
         )
 
         db.session.add(question)
@@ -100,8 +101,8 @@ class QuestionIndex(Resource):
     )
     @jwt_required()
     def delete(self):
-        question_id = request.json['question_id']
-        question = Question.query.filter_by(id=question_id).first()
+        question_id: int = request.json['question_id']
+        question: Question = Question.query.filter_by(id=question_id).first()
         if not question or not question.user_id == current_user.id:
             return {"status": 401, "message": "Unauthorized"}, 401
 
@@ -114,7 +115,6 @@ class QuestionIndex(Resource):
         return {"status": 200, "message": "The question was successfully deleted."}, 200
 
 
-# TODO: improve the logics
 @question_ns.route('/answer')
 class QuestionsAnswer(Resource):
     @question_ns.doc(
@@ -128,10 +128,8 @@ class QuestionsAnswer(Resource):
         question: Question = Question.query.filter_by(id=params["question_id"]).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
-
         if not question.is_open:
             return {"status": 409, "message": "The questions had been closed already."}, 409
-
         if question.user_id == current_user.id or current_user.is_answered_question(question):
             return {"status": 400, "message": "Bad request"}, 400
 
@@ -140,28 +138,28 @@ class QuestionsAnswer(Resource):
             result_point: int = AnswerResultPoint.FIRST.value
 
         else:
-            yes_count: int = len(db.session.query(answer)
-                                 .filter(answer.c.question_id == params["question_id"])
-                                 .filter(answer.c.is_yes == 1)
-                                 .all())
+            first_count: int = len(db.session.query(answer)
+                                   .filter(answer.c.question_id == params["question_id"])
+                                   .filter(answer.c.option == QuestionOption.first.value)
+                                   .all())
 
-            no_count: int = len(db.session.query(answer)
-                                .filter(answer.c.question_id == params["question_id"])
-                                .filter(answer.c.is_yes == 0)
-                                .all())
-            if request.json["is_yes"]:
-                yes_count += 1
-                if yes_count == no_count:
+            second_count: int = len(db.session.query(answer)
+                                    .filter(answer.c.question_id == params["question_id"])
+                                    .filter(answer.c.option == QuestionOption.second.value)
+                                    .all())
+            if params["option"] == QuestionOption.first.value:
+                first_count += 1
+                if first_count == second_count:
                     result_point = AnswerResultPoint.EVEN.value
-                elif yes_count > no_count:
+                elif first_count > second_count:
                     result_point = AnswerResultPoint.RIGHT.value
                 else:
                     result_point = AnswerResultPoint.WRONG.value
             else:
-                no_count += 1
-                if yes_count == no_count:
+                second_count += 1
+                if first_count == second_count:
                     result_point = AnswerResultPoint.EVEN.value
-                elif no_count > yes_count:
+                elif second_count > first_count:
                     result_point = AnswerResultPoint.RIGHT.value
                 else:
                     result_point = AnswerResultPoint.WRONG.value
@@ -170,7 +168,7 @@ class QuestionsAnswer(Resource):
         insert_answer = answer.insert().values(
             user_id=current_user.id,
             question_id=question.id,
-            is_yes=params["is_yes"],
+            option=params["option"],
         )
         db.session.execute(insert_answer)
 
@@ -180,6 +178,12 @@ class QuestionsAnswer(Resource):
             point=result_point
         )
         db.session.execute(insert_point)
+
+        # create response
+        insert_response = response.insert().values(
+            user_id=question.user_id,
+        )
+        db.session.execute(insert_response)
 
         # create notifications
         current_user.create_answer_notification(question)
@@ -199,7 +203,7 @@ class QuestionShow(Resource):
     )
     @jwt_required()
     def get(self, question_id):
-        question = Question.query.filter_by(id=question_id).first()
+        question: Question or None = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
 
@@ -217,36 +221,38 @@ class QuestionOwner(Resource):
     )
     @jwt_required()
     def get(self, question_id):
-        question = Question.query.filter_by(id=question_id).first()
+        question: Question or None = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
         elif question.is_open and not question.user_id == current_user.id \
                 and not current_user.is_answered_question(question):
             return {"status": 403, "message": "Forbidden"}, 403
 
-        # pie_chart_data
-        pie_chart_data = [
-            len(db.session.query(answer)
-                .filter(answer.c.question_id == question_id)
-                .filter(answer.c.is_yes == 0)
-                .all()),
-            len(db.session.query(answer)
-                .filter(answer.c.question_id == question_id)
-                .filter(answer.c.is_yes == 1)
-                .all())
-        ]
+        # Aggregate each options count.
+        first_count: int = len(db.session.query(answer)
+                               .filter(answer.c.question_id == question_id)
+                               .filter(answer.c.option == QuestionOption.first.value)
+                               .all())
 
-        # answered users
-        objects = db.session.query(User, answer.c.is_yes.label("is_yes")) \
+        second_count: int = len(db.session.query(answer)
+                                .filter(answer.c.question_id == question_id)
+                                .filter(answer.c.option == QuestionOption.second.value)
+                                .all())
+
+        count_data: list = [first_count, second_count]
+
+        # Get answered users and their options.
+        objects: list = db.session.query(User, answer.c.option.label("option")) \
             .join(answer, answer.c.user_id == User.id) \
             .filter(answer.c.question_id == question_id) \
             .order_by(answer.c.created_at.desc()) \
             .all()
-        users = list(map(lambda x: x.User.to_dict() | {
-            "is_yes": x.is_yes
+
+        users: list = list(map(lambda x: x.User.to_dict() | {
+            "option": x.option
         }, objects))
 
-        return {"pie_chart_data": pie_chart_data, "users": users}
+        return {"count_data": count_data, "users": users}, 200
 
 
 @question_ns.route('/next')
@@ -258,18 +264,18 @@ class QuestionNext(Resource):
     )
     @jwt_required()
     def get(self):
-        answered_question_ids = list(map(lambda x: x.id, current_user.answered_questions))
-        owner_question_ids = list(map(lambda x: x.id, current_user.questions))
+        answered_question_ids: list[int] = list(map(lambda x: x.id, current_user.answered_questions))
+        owner_question_ids: list[int] = list(map(lambda x: x.id, current_user.questions))
 
-        question = Question.query \
+        question: Question or None = Question.query \
             .filter(Question.closed_at > time()) \
             .filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
             .order_by(func.rand()) \
             .limit(1) \
             .first()
         if not question:
-            return {"status": 200, "message": "none", "data": None}
-        return {"status": 200, "message": "ok", "data": question.id}
+            return {"message": "none", "data": None}, 200
+        return {"message": "ok", "data": question.id}, 200
 
 
 @question_ns.route('/timeline')
@@ -338,9 +344,9 @@ class QuestionBookmark(Resource):
     )
     @jwt_required()
     def delete(self):
-        question_id = request.json["question_id"]
+        question_id: int = request.json["question_id"]
 
-        question = Question.query.filter_by(id=question_id).first()
+        question: Question or None = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 400, "message": "bad request"}, 400
 
