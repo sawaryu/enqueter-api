@@ -263,7 +263,7 @@ class User(db.Model):
 
 class PointStats(db.Model):
     """PointStats
-    Mainly for all users ranking, that is aggregated by batch.
+    Mainly for all users ranking of points, that is aggregated by batch.
     """
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
@@ -306,6 +306,56 @@ class PointStats(db.Model):
     @property
     def get_week(self) -> list or None:
         result = [self.week_rank, self.week_point]
+        if not result[0] or not result[1]:
+            return None
+        return result
+
+
+class ResponseStats(db.Model):
+    """ResponseStats
+    Mainly for all users ranking of response, that is aggregated by batch.
+    """
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), unique=True)
+    total_rank = Column(Integer, nullable=False)
+    total_response = Column(Integer, nullable=False)
+    month_rank = Column(Integer, default=None)
+    month_response = Column(Integer, default=None)
+    week_rank = Column(Integer, default=None)
+    week_response = Column(Integer, default=None)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "total_rank": self.total_rank,
+            "month_rank": self.month_rank,
+            "week_rank": self.week_rank,
+            "total_response": self.total_point,
+            "month_response": self.month_point,
+            "week_response": self.week_point,
+        }
+
+    @classmethod
+    def find_by_user_id(cls, user_id: int) -> "ResponseStats":
+        return cls.query.filter_by(user_id=user_id).first()
+
+    # must be exists.
+    @property
+    def get_total(self) -> list:
+        result = [self.total_rank, self.total_response]
+        return result
+
+    @property
+    def get_month(self) -> list or None:
+        result = [self.month_rank, self.month_response]
+        if not result[0] or not result[1]:
+            return None
+        return result
+
+    @property
+    def get_week(self) -> list or None:
+        result = [self.week_rank, self.week_response]
         if not result[0] or not result[1]:
             return None
         return result

@@ -7,7 +7,7 @@ from flask_restx import Namespace, fields, Resource
 from flask_jwt_extended import jwt_required, current_user
 from sqlalchemy import func
 
-from api.model.aggregate import point
+from api.model.aggregate import point, response
 from api.model.enum.enums import AnswerResultPoint, QuestionOption
 from api.model.others import Notification
 from api.model.question import Question, answer
@@ -36,7 +36,6 @@ answerCreateModel = question_ns.model('BookmarkCreate', {
 })
 
 
-# TODO
 @question_ns.route('')
 class QuestionIndex(Resource):
     @question_ns.doc(
@@ -116,7 +115,6 @@ class QuestionIndex(Resource):
         return {"status": 200, "message": "The question was successfully deleted."}, 200
 
 
-# TODO: improve the logics
 @question_ns.route('/answer')
 class QuestionsAnswer(Resource):
     @question_ns.doc(
@@ -180,6 +178,12 @@ class QuestionsAnswer(Resource):
             point=result_point
         )
         db.session.execute(insert_point)
+
+        # create response
+        insert_response = response.insert().values(
+            user_id=question.user_id,
+        )
+        db.session.execute(insert_response)
 
         # create notifications
         current_user.create_answer_notification(question)

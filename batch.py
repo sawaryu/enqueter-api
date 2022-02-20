@@ -2,8 +2,8 @@ from datetime import timedelta, datetime
 
 import click
 from sqlalchemy import func
-from api.model.aggregate import point
-from api.model.user import User, PointStats
+from api.model.aggregate import point, response
+from api.model.user import User, PointStats, ResponseStats
 from app import app
 from database import db
 
@@ -23,7 +23,6 @@ def batch_execute(message: str = "default") -> None:
         step_0()
         step_1()
         step_2()
-        # ..another steps if exists.
         db.session.commit()
         app.logger.info("Successfully finished all steps.")
     except:
@@ -48,7 +47,7 @@ def step_1() -> None:
     """
     results: list[dict] = []
     for (loop, period) in enumerate([{"days": 365 * 100}, {"days": 30}, {"days": 7}]):
-        """Point & Answer count"""
+        """Point"""
         point_entities = db.session.query(User, func.sum(point.c.point).label("points")) \
             .join(point, point.c.user_id == User.id) \
             .filter(point.c.created_at > (datetime.now() - timedelta(**period))) \
@@ -111,4 +110,68 @@ def step_1() -> None:
 
 
 def step_2() -> None:
-    pass
+    """
+    Firstly Aggregate data.
+    """
+    results: list[dict] = []
+    for (loop, period) in enumerate([{"days": 365 * 100}, {"days": 30}, {"days": 7}]):
+        """response & Answer count"""
+        response_entities = db.session.query(User, func.count(response.c.user_id).label("responses")) \
+            .join(response, response.c.user_id == User.id) \
+            .filter(response.c.created_at > (datetime.now() - timedelta(**period))) \
+            .group_by(User.id) \
+            .order_by(func.count(response.c.user_id).desc()) \
+            .order_by(User.id.desc()) \
+            .all()
+
+        for (index_rank, entity) in enumerate(response_entities):
+            if loop == 0:
+                init_dict = {
+                    "user_id": entity.User.id,
+                    "total_rank": index_rank + 1,
+                    "total_response": int(entity.responses),
+                    "month_rank": None,
+                    "month_response": None,
+                    "week_rank": None,
+                    "week_response": None
+                }
+                results.append(init_dict)
+            elif loop == 1:
+                month_dict = {
+                    "month_rank": index_rank + 1,
+                    "month_response": int(entity.responses),
+                }
+                for (index, r) in enumerate(results):
+                    if r["user_id"] == entity.User.id:
+                        results[index] = results[index] | month_dict
+                        break
+            elif loop == 2:
+                week_dict = {
+                    "week_rank": index_rank + 1,
+                    "week_response": int(entity.responses),
+                }
+                for (index, r) in enumerate(results):
+                    if r["user_id"] == entity.User.id:
+                        results[index] = results[index] | week_dict
+                        break
+    app.logger.info("Successfully collected data.")
+
+    """
+    Finally, Update or Create records
+    """
+    for r in results:
+        stats = ResponseStats.find_by_user_id(r["user_id"])
+        # update
+        if stats:
+            stats.total_rank = r["total_rank"]
+            stats.total_response = r["total_response"]
+            stats.month_rank = r["month_rank"]
+            stats.month_response = r["month_response"]
+            stats.week_rank = r["week_rank"]
+            stats.week_response = r["week_response"]
+        # create
+        else:
+            stats = ResponseStats(**r)
+            db.session.add(stats)
+        db.session.flush()
+    app.logger.info("Successfully finished Step2.")
