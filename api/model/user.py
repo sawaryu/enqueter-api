@@ -68,7 +68,10 @@ class User(db.Model):
             "role": self.role
         }
 
-    point_stats = db.relationship('PointStats', backref="user", lazy="dynamic", cascade='all, delete-orphan')
+    point_stats = db.relationship('PointStats', backref="user", lazy=True, cascade='all, delete-orphan',
+                                  uselist=False)
+    response_stats = db.relationship('ResponseStats', backref="user", lazy=True, cascade='all, delete-orphan',
+                                     uselist=False)
 
     confirmations = db.relationship('Confirmation', backref='user', lazy="dynamic", cascade='all, delete-orphan')
     update_emails = db.relationship('UpdateEmail', backref='user', lazy="dynamic",

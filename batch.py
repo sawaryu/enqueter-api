@@ -36,15 +36,17 @@ def batch_execute(message: str = "default") -> None:
 
 def step_0() -> None:
     """Delete non active users"""
+    app.logger.info("--- step_0 start ---")
     User.query.filter_by(is_deleted=True).delete()
     db.session.flush()
-    app.logger.info("Successfully deleted non active users.")
+    app.logger.info("--- step_0 end ---")
 
 
 def step_1() -> None:
     """
     Firstly Aggregate data.
     """
+    app.logger.info("--- step_1 start ---")
     results: list[dict] = []
     for (loop, period) in enumerate([{"days": 365 * 100}, {"days": 30}, {"days": 7}]):
         """Point"""
@@ -106,13 +108,15 @@ def step_1() -> None:
             stats = PointStats(**r)
             db.session.add(stats)
         db.session.flush()
-    app.logger.info("Successfully finished Step1.")
+    app.logger.info("Successfully create and update data.")
+    app.logger.info("--- step_1 end ---")
 
 
 def step_2() -> None:
     """
     Firstly Aggregate data.
     """
+    app.logger.info("--- step_2 start ---")
     results: list[dict] = []
     for (loop, period) in enumerate([{"days": 365 * 100}, {"days": 30}, {"days": 7}]):
         """response & Answer count"""
@@ -174,4 +178,5 @@ def step_2() -> None:
             stats = ResponseStats(**r)
             db.session.add(stats)
         db.session.flush()
-    app.logger.info("Successfully finished Step2.")
+    app.logger.info("Successfully create and update data.")
+    app.logger.info("--- step_2 end ---")

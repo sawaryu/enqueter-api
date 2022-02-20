@@ -397,19 +397,26 @@ class UserStats(Resource):
             return {"message": "Not Found."}, 404
 
         period = request.args.get("period")
-        point_stats = user.point_stats.first()
+        point_stats: PointStats = user.point_stats
+        response_stats: ResponseStats = user.response_stats
         if period == "week":
             d = {"weeks": 1}
             if point_stats:
-                point_stats = point_stats.get_week
+                point_stats: list = point_stats.get_week
+            if response_stats:
+                response_stats: list = response_stats.get_week
         elif period == "month":
             d = {"days": 30}
             if point_stats:
-                point_stats = point_stats.get_month
+                point_stats: list = point_stats.get_month
+            if response_stats:
+                response_stats: list = response_stats.get_month
         else:  # all
             d = {"days": 365 * 100}
             if point_stats:
-                point_stats = point_stats.get_total
+                point_stats: list = point_stats.get_total
+            if response_stats:
+                response_stats: list = response_stats.get_total
 
         objects = db.session.query(point.c.point.label("point")) \
             .filter(point.c.user_id == user_id) \
@@ -422,4 +429,4 @@ class UserStats(Resource):
 
         radar_data = [right_count, first_count, wrong_count, even_count]
 
-        return {"radar_data": radar_data, "point_stats": point_stats}
+        return {"radar_data": radar_data, "point_stats": point_stats, "response_stats": response_stats}, 200
