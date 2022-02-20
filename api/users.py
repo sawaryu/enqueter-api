@@ -76,7 +76,7 @@ class UserQuestionsAnswered(Resource):
     )
     @jwt_required()
     def get(self, user_id):
-        page = int(request.args.get('page'))
+        page: int = int(request.args.get('page'))
         if not page:
             return {"message": "Bad Request."}, 400
 
@@ -97,10 +97,15 @@ class UserQuestionsAnswered(Resource):
 class UserQuestionsBookmarked(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get bookmarked questions by user_id. (*only access for current_user)'
+        description='Get bookmarked questions by user_id. (*only access for current_user)',
+        params={'page': {'type': 'str'}}
     )
     @jwt_required()
     def get(self, user_id):
+        page: int = int(request.args.get('page'))
+        if not page:
+            return {"message": "Bad Request."}, 400
+
         # path parameters are treated as 'string'. So it is needed to casting to 'int'.
         if not current_user.id == int(user_id):
             return {"status": 404, "message": "Not found."}, 404
@@ -110,7 +115,8 @@ class UserQuestionsBookmarked(Resource):
             .filter(bookmark.c.user_id == user_id) \
             .join(User, User.id == Question.user_id) \
             .order_by(bookmark.c.created_at.desc()) \
-            .all()
+            .paginate(page=page, per_page=15, error_out=False) \
+            .items
 
         return list(map(lambda x: x.Question.to_dict() | {
             "user": x.User.to_dict()
