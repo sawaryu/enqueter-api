@@ -56,7 +56,7 @@ sendEmail = auth_ns.model('AuthSendEmail', {
 })
 
 updateEmail = auth_ns.model('AuthUpdateEmail', {
-    'token': fields.String(required=True, max_length=50)
+    'code': fields.String(required=True, min_length=6, max_length=6)
 })
 
 resetPassword = auth_ns.model('AuthResetPassword', {
@@ -314,7 +314,7 @@ class AuthUpdateEmail(Resource):
 
     @auth_ns.doc(
         security='jwt_auth',
-        description='Send email with token to new address.',
+        description='Send email with code to new address.',
         body=sendEmail
     )
     @jwt_required()
@@ -325,11 +325,11 @@ class AuthUpdateEmail(Resource):
         try:
             old_update_email_confirmation = current_user.most_recent_update_email_confirmation
             if old_update_email_confirmation:
-                old_update_email_confirmation.force_to_expire()
+                old_update_email_confirmation.force_to_expire()  # important
             new_update_email_confirmation = UpdateEmail(current_user.id, request.json["email"])
             new_update_email_confirmation.save_to_db()
             current_user.send_update_confirmation_email()
-            return {'message': 'An email with token '
+            return {'message': 'An email with code '
                                'has been sent to your email address, please check.'}, 201
         except MailGunException as e:
             return {"message": str(e)}, 400
@@ -339,18 +339,18 @@ class AuthUpdateEmail(Resource):
 
     @auth_ns.doc(
         security='jwt_auth',
-        description='Confirm token and update the E-mail.',
+        description='Confirm code and update the E-mail.',
         body=updateEmail
     )
     @jwt_required()
     def put(self):
-        token = request.json["token"]
+        code = request.json["code"]
 
-        update_email = UpdateEmail.find_by_user_id_and_token(current_user.id, token)
+        update_email = UpdateEmail.find_by_user_id_and_code(current_user.id, code)
         if not update_email:
-            return {"message": "The token is incorrect."}, 400
+            return {"message": "The code is incorrect."}, 400
         if update_email.is_expired:
-            return {"message": "That token is expired already. please start over.",
+            return {"message": "That code is expired already. please start over.",
                     "type": "danger"}, 400
 
         # if the email is used while process of updating.
@@ -358,7 +358,7 @@ class AuthUpdateEmail(Resource):
             return {"message": "Sorry, E-mail is already used by someone."}, 400
 
         current_user.email = update_email.email
-        update_email.force_to_expire()
+        update_email.force_to_expire()  # important
         db.session.commit()
 
         return {"message": "Your email has been updated successfully."}, 200

@@ -195,9 +195,9 @@ class User(db.Model):
     def send_update_confirmation_email(self) -> Response:
         update_email = self.most_recent_update_email_confirmation
         subject = "Update E-mail"
-        token = update_email.id
-        text = f"Hi,{self.nickname}. Please enter the token to Enqueter for confirming the new E-mail. token: {token}"
-        html = render_template("update_email.html", name=self.nickname, token=token)
+        code = update_email.code
+        text = f"Hi,{self.nickname}. Please enter the code to Enqueter for confirming the new E-mail. code: {code}"
+        html = render_template("update_email.html", name=self.nickname, code=code)
         return MailGun.send_email([update_email.email], subject, text, html)
 
     """Relationships"""
