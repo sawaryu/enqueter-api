@@ -4,6 +4,9 @@
 EnqueterプロジェクトのAPI。python(flask)を使用
 
 
+## DB structure
+![image](images/db-structure.png)
+
 
 ## 注意事項
 *　import補完が効かない事象が発生
