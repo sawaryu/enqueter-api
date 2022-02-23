@@ -124,7 +124,7 @@ class UserQuestionsBookmarked(Resource):
 
 
 # Follow
-@user_ns.route('/<int:user_id>/followings')
+@user_ns.route('/<user_id>/followings')
 class UserFollowings(Resource):
     @user_ns.doc(
         security='jwt_auth',
@@ -148,7 +148,7 @@ class UserFollowings(Resource):
         return users_dicts
 
 
-@user_ns.route('/<int:user_id>/followers')
+@user_ns.route('/<user_id>/followers')
 class UserFollowers(Resource):
     @user_ns.doc(
         security='jwt_auth',
@@ -302,7 +302,7 @@ class UsersSearchHistory(Resource):
         }
 
 
-@user_ns.route('/<int:target_id>/search/history')
+@user_ns.route('/<target_id>/search/history')
 class UsersSearchHistoryShow(Resource):
     @user_ns.doc(
         security='jwt_auth',

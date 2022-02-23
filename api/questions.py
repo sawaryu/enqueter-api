@@ -195,7 +195,7 @@ class QuestionsAnswer(Resource):
 
 
 # common question info
-@question_ns.route('/<int:question_id>')
+@question_ns.route('/<question_id>')
 class QuestionShow(Resource):
     @question_ns.doc(
         security='jwt_auth',
@@ -212,7 +212,7 @@ class QuestionShow(Resource):
         }
 
 
-@question_ns.route('/<int:question_id>/owner')
+@question_ns.route('/<question_id>/owner')
 class QuestionOwner(Resource):
     @question_ns.doc(
         security='jwt_auth',
