@@ -125,11 +125,9 @@ class QuestionsAnswer(Resource):
     @jwt_required()
     def post(self):
         params: dict = request.json
-        question: Question = Question.query.filter_by(id=params["question_id"]).first()
+        question = Question.find_by_id(params["question_id"])
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
-        if not question.is_open:
-            return {"status": 409, "message": "The questions had been closed already."}, 409
         if question.user_id == current_user.id or current_user.is_answered_question(question):
             return {"status": 400, "message": "Bad request"}, 400
 
@@ -224,8 +222,7 @@ class QuestionOwner(Resource):
         question: Question or None = Question.query.filter_by(id=question_id).first()
         if not question:
             return {"status": 404, "message": "Not Found"}, 404
-        elif question.is_open and not question.user_id == current_user.id \
-                and not current_user.is_answered_question(question):
+        elif not question.user_id == current_user.id and not current_user.is_answered_question(question):
             return {"status": 403, "message": "Forbidden"}, 403
 
         # Aggregate each options count.
@@ -268,7 +265,6 @@ class QuestionNext(Resource):
         owner_question_ids: list[int] = list(map(lambda x: x.id, current_user.questions))
 
         question: Question or None = Question.query \
-            .filter(Question.closed_at > time()) \
             .filter(Question.id.notin_(answered_question_ids + owner_question_ids)) \
             .order_by(func.rand()) \
             .limit(1) \

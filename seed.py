@@ -1,5 +1,3 @@
-from time import time
-
 from faker import Faker
 from sqlalchemy import text
 
@@ -66,21 +64,6 @@ def main():
             for target_user in target_users:
                 first_user.follow(target_user)
                 target_user.follow(first_user)
-                db.session.flush()
-
-            """Create closed questions"""
-            for n in range(1, 7):
-                content = faker_gen.address() + "?"
-                option_first = "option1"
-                option_second = "option2"
-                question = Question(
-                    content=content,
-                    user_id=n,
-                    option_first=option_first,
-                    option_second=option_second
-                )
-                question.closed_at = time()
-                db.session.add(question)
                 db.session.flush()
 
             """Create questions"""

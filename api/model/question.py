@@ -1,5 +1,4 @@
 from datetime import datetime
-from time import time
 
 from flask_jwt_extended import current_user
 from sqlalchemy import String, Integer, Column, DateTime, ForeignKey, UniqueConstraint, Enum
@@ -31,7 +30,6 @@ class Question(db.Model):
     content = Column(String(140), nullable=False)
     option_first = Column(String(15), nullable=False)
     option_second = Column(String(15), nullable=False)
-    closed_at = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
 
     def __init__(self, user_id: int, content: str, option_first: str, option_second: str, **kwargs):
@@ -40,7 +38,6 @@ class Question(db.Model):
         self.content = content
         self.option_first = option_first
         self.option_second = option_second
-        self.closed_at = int(time()) + 604800  # 1 week
 
     answered_users = db.relationship(
         'User',
@@ -57,12 +54,14 @@ class Question(db.Model):
             "content": self.content,
             "option_first": self.option_first,
             "option_second": self.option_second,
-            "closed_at": str(self.closed_at),
             "created_at": str(self.created_at),
-            "is_open": self.is_open,
             "is_answered": self.is_answered,
             "is_bookmarked": self.is_bookmarked
         }
+
+    @classmethod
+    def find_by_id(cls, _id: int) -> "Question":
+        return cls.query.filter_by(id=_id).first()
 
     def save_to_db(self) -> None:
         db.session.add(self)
@@ -71,11 +70,6 @@ class Question(db.Model):
     def delete_from_db(self) -> None:
         db.session.delete(self)
         db.session.commit()
-
-    # if the question has been created at before more than a week, it is treated as 'closed' question.
-    @property
-    def is_open(self) -> bool:
-        return time() < self.closed_at
 
     # whether current_user bookmarked the question.
     @property
