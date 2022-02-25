@@ -15,7 +15,7 @@ ENV FLASK_APP=app
 COPY . /app
 
 # Importtant variables getting from AWS SSM
-ENV FLASK_CONFIGURATION="production"
+ENV FLASK_ENV="production"
 ENV AWS_REGION="ap-northeast-1"
 ENV AWS_BUCKET_NAME="mainmybucket"
 ENV AWS_PATH_KEY="avatar/"

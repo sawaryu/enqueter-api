@@ -34,7 +34,7 @@ $ pip freeze
 # Output to requirements.txt
 $ pip freeze > requirements.txt
 ```
-<u>3. Start project in Docker</u>
+<u>3. Start project by Docker</u>
 ```bash
 # Start project (*--no-cache is optional)
 (enquter)$ docker-compose build --no-cache
@@ -53,3 +53,32 @@ $ docker run --rm --net='enqueter_default' --name flask_batch -it \
 Solved by assigning `.venv` as "exclude folder".
 
 ![image](images/import-problem.png)
+
+## Logging
+
+How to log to uWSGI
+
+> https://stackoverflow.com/questions/46846856/python-logging-flask-uwsgi-nginx
+
+```python
+#-- app.py
+import logging
+from flask.logging import default_handler
+
+formatter = logging.Formatter(  # pylint: disable=invalid-name
+    '%(asctime)s %(levelname)s %(process)d ---- %(threadName)s  '
+    '%(module)s : %(funcName)s {%(pathname)s:%(lineno)d} %(message)s','%Y-%m-%dT%H:%M:%SZ')
+
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+
+app.logger.setLevel(logging.DEBUG)
+app.logger.addHandler(handler)
+app.logger.removeHandler(default_handler)
+
+app.logger.debug('Debug Message')
+app.logger.info('Info Message')
+app.logger.warning('Warning Message')
+app.logger.error('Error Message')
+app.logger.critical('Critical ')
+```

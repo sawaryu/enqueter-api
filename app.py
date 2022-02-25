@@ -1,6 +1,8 @@
+import logging
 import os
 
 from flask import Flask, make_response
+from flask.logging import default_handler
 from flask_jwt_extended import JWTManager
 from flask_restx import Api, Resource
 from flask_cors import CORS
@@ -18,12 +20,22 @@ from database import db
 app = Flask(__name__)
 
 # basic setting
-app.config.from_object(config.config[os.getenv('FLASK_CONFIGURATION', 'develop')])
+app.config.from_object(config.config[os.getenv('FLASK_ENV', 'develop')])
 db.init_app(app)
 migrate = Migrate(app, db)
 
+# logging
+formatter = logging.Formatter(  # pylint: disable=invalid-name
+    '%(asctime)s %(levelname)s %(process)d -- %(threadName)s '
+    '%(module)s : %(funcName)s {%(pathname)s:%(lineno)d} %(message)s', '%Y-%m-%dT%H:%M:%SZ')
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+app.logger.setLevel(logging.INFO)
+app.logger.addHandler(handler)
+app.logger.removeHandler(default_handler)
+
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+CORS(app, resources={r"/api/*": {"origins": f"{os.getenv('ORIGINS', 'http://localhost:3000')}"}})
 
 
 # jwt settings
@@ -91,7 +103,7 @@ api.add_namespace(notification_ns, path='/notifications')
 
 def main():
     print(app.url_map)
-    print("starting API application...")
+    app.logger.info(f"Starting Enqueter API in {app.config['ENV']}")
     app.run(
         host=app.config['APP_HOST'],
         port=app.config['APP_PORT']

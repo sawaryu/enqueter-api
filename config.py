@@ -1,7 +1,7 @@
 from datetime import timedelta
 import os
 
-# determine which environment by 'FLASK_CONFIGURATION'
+# determine which environment by 'FLASK_ENV'
 config = {
     "production": "config.ProductionConfig",
     "develop": "config.DevelopConfig",
@@ -25,7 +25,7 @@ class BasicConfig(object):
 
 
 class DevelopConfig(BasicConfig):
-    ENV = 'development'
+    ENV = 'develop'
     DEBUG = True
     APP_HOST = 'localhost'
     APP_PORT = 5000
@@ -36,3 +36,4 @@ class ProductionConfig(BasicConfig):
     DEBUG = False
     APP_HOST = '0.0.0.0'
     APP_PORT = 80
+
