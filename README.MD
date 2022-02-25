@@ -1,47 +1,55 @@
 # Enqueter API
 
-## 概要
-EnqueterプロジェクトのAPI
+## Overview
+API for Enqueter project.
 
-`開発環境`
+`Development environment`
 * MacOS (Bigsur)
 * InteliJ IDEA (python community edition)
 * python3.9.6 (flask)
 
-## 環境構築
-<u>1. venvの作成</u>
+## Setup
+<u>1. venv</u>
 ```bash
-# 作成
+# Create
 $ python3 -m venv [ENV_NAME]
-# 起動
+# Start
 $ . .venv/bin/activate
-# 終了
+# Shutdown
 $ deactivate
-# 削除
+# Clear
 $ rm -rf ENV_NAME/
-# 仮想環境を初期状態に戻す
+# Reset
 $ python3 -m venv -clear ENV_NAME
 ```
 
 <u>2. pip</u>
 ```bash
-# ライブラリのインストール
+# Install libraries
 $ pip install --upgrade pip
 $ pip install -r requirements.txt
-# インストール済みライブラリ
+# Get list of installed libraries
 $ pip list
 $ pip freeze
-# requirements.txtへ書き出し
+# Output to requirements.txt
 $ pip freeze > requirements.txt
+```
+<u>3. Start project in Docker</u>
+```bash
+# Start project (*--no-cache is optional)
+(enquter)$ docker-compose build --no-cache
+# Execute batch container
+$ docker run --rm --net='enqueter_default' --name flask_batch -it \
+  -e SQLALCHEMY_DATABASE_URI='mysql+pymysql://production:production@db/production?charset=utf8mb4' enqueter_api sh batch.sh
 ```
 
 ## DB structure
 ![image](images/db-structure.png)
 
 
-## 注意事項
-*　import補完が効かない事象が発生
+## Attention
+*　Doesn't work complement
 
-`.venv`を除外フォルダーとして指定することで解決
+Solved by assigning `.venv` as "exclude folder".
 
 ![image](images/import-problem.png)
