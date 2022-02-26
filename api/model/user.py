@@ -163,7 +163,7 @@ class User(db.Model):
         text = f"Hi,{self.nickname}. Please click the link to confirm your account. {link}"
         html = render_template("confirmation.html", name=self.nickname, link=link, salutation="Welcome to Enqueter.",
                                content="Please click the below button to confirm your account.",
-                               btn="Confirm the account", btn_color="#504e4b")
+                               btn="Confirm the account", btn_color="#504e4b", font_size="16px", update_email=False)
         return MailGun.send_email([self.email], subject, text, html)
 
     """Reset password"""
@@ -187,7 +187,7 @@ class User(db.Model):
         text = f"Hi,{self.nickname}. Please click the link to reset your password. {link}"
         html = render_template("confirmation.html", name=self.nickname, link=link, salutation="Forgot password?",
                                content="If so, please click the below button to reset your password.",
-                               btn="Reset password", btn_color="#c29a5d")
+                               btn="Reset password", btn_color="#c29a5d", font_size="16px", update_email=False)
         return MailGun.send_email([self.email], subject, text, html)
 
     """Update Email"""
@@ -201,7 +201,9 @@ class User(db.Model):
         subject = "Update E-mail"
         code = update_email.code
         text = f"Hi,{self.nickname}. Please enter the code to Enqueter for confirming the new E-mail. code: {code}"
-        html = render_template("update_email.html", name=self.nickname, code=code)
+        html = render_template("confirmation.html", name=self.nickname, salutation="Change your E-mail?",
+                               content="If so, please enter the below numbers to Enqueter.",
+                               btn=code, btn_color="#e0dcd8", font_size="20px", update_email=True)
         return MailGun.send_email([update_email.email], subject, text, html)
 
     """Relationships"""

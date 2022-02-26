@@ -298,11 +298,18 @@
                          cellspacing="0" cellpadding="0" align="center">
                     <tr>
                       <td class="em_white" height="42" align="center" valign="middle"
-                          style="font-size: 16px; color:#ffffff; font-weight:bold; height:42px;">
+                          style="font-size: {{font_size}}; color:#ffffff; font-weight:bold; height:42px;">
+                        {% if update_email %}
+                        <div target="_blank"
+                             style="text-decoration:none; color:#030303; line-height:42px; display:block;">
+                          {{btn}}
+                        </div>
+                        {% else %}
                         <a href="{{link}}" target="_blank"
                            style="text-decoration:none; color:#ffffff; line-height:42px; display:block;">
                           {{btn}}
                         </a>
+                        {% endif %}
                       </td>
                     </tr>
                   </table>
