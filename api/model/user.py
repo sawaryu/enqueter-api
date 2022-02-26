@@ -161,7 +161,9 @@ class User(db.Model):
         subject = "Registration confirmation"
         # for medias not compatible with html.
         text = f"Hi,{self.nickname}. Please click the link to confirm your account. {link}"
-        html = render_template("confirm.html", name=self.nickname, link=link)
+        html = render_template("confirmation.html", name=self.nickname, link=link, salutation="Welcome to Enqueter.",
+                               content="Please click the below button to confirm your account.",
+                               btn="Confirm the account", btn_color="#504e4b")
         return MailGun.send_email([self.email], subject, text, html)
 
     """Reset password"""
@@ -183,7 +185,9 @@ class User(db.Model):
         link = os.getenv("FRONT_URL") + f"/welcome?token={token}&email={self.email}"
         subject = "Reset password"
         text = f"Hi,{self.nickname}. Please click the link to reset your password. {link}"
-        html = render_template("reset_password.html", name=self.nickname, link=link)
+        html = render_template("confirmation.html", name=self.nickname, link=link, salutation="Forgot password?",
+                               content="If so, please click the below button to reset your password.",
+                               btn="Reset password", btn_color="#c29a5d")
         return MailGun.send_email([self.email], subject, text, html)
 
     """Update Email"""
