@@ -38,9 +38,14 @@ $ pip freeze > requirements.txt
 ```bash
 # Start project (*--no-cache is optional)
 (enquter)$ docker-compose build --no-cache
+
+# Execute seed container 
+$ docker run --rm --net='enqueter_default' --name seed_task -it \
+  -e SQLALCHEMY_DATABASE_URI='mysql+pymysql://production:production@db/production?charset=utf8mb4' enqueter_api sh shell/seed.sh
+
 # Execute batch container
-$ docker run --rm --net='enqueter_default' --name flask_batch -it \
-  -e SQLALCHEMY_DATABASE_URI='mysql+pymysql://production:production@db/production?charset=utf8mb4' enqueter_api sh batch.sh
+$ docker run --rm --net='enqueter_default' --name batch_task -it \
+  -e SQLALCHEMY_DATABASE_URI='mysql+pymysql://production:production@db/production?charset=utf8mb4' enqueter_api sh shell/batch.sh
 ```
 
 ## DB structure
