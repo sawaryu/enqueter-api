@@ -26,9 +26,9 @@ migrate = Migrate(app, db)
 jwt = JWTManager(app)
 CORS(app, resources={r"/api/*": {"origins": f"{os.getenv('FRONT_URL', 'http://localhost:3000')}"}})
 
-# logging
+# logging (asctime display to cloudwatch. don't need)
 formatter = logging.Formatter(
-    '%(asctime)s %(levelname)s %(process)d -- %(threadName)s '
+    '%(levelname)s %(process)d -- %(threadName)s '
     '%(module)s : %(funcName)s {%(pathname)s:%(lineno)d} %(message)s', '%Y-%m-%dT%H:%M:%SZ')
 handler = logging.StreamHandler()
 handler.setFormatter(formatter)
@@ -86,6 +86,7 @@ authorizations = {
 
 api = Api(
     app,
+    doc="/document",
     title='Enqueter API',
     version='1.0',
     license="SAMPLE license",

@@ -34,7 +34,7 @@ def seed_execute(stop: bool):
             db.session.execute(text(f'DROP TABLE IF EXISTS {tbl};'))
             db.session.commit()
         if stop:
-            app.logger.info("Drop All models completely and seed processed are stopped.")
+            app.logger.info("Drop All models completely and seed processes had been stopped.")
             return
 
         db.create_all()
