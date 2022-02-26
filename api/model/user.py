@@ -157,7 +157,7 @@ class User(db.Model):
     def send_confirmation_email(self) -> Response:
         # ex: https://127.0.0.1:5000/ > https://127.0.0.1:5000
         # link = request.url_root[0:-1] + f"/api/v1/auth/{self.most_recent_confirmation.id}/confirm"
-        link = os.getenv("FRONT_WELCOME_URL") + f"?=confirm={self.most_recent_confirmation.id}"
+        link = os.getenv("FRONT_URL") + f"/welcome?=confirm={self.most_recent_confirmation.id}"
         subject = "Registration confirmation"
         # for medias not compatible with html.
         text = f"Hi,{self.nickname}. Please click the link to confirm your account. {link}"
@@ -180,7 +180,7 @@ class User(db.Model):
         db.session.commit()
 
     def send_reset_password_email(self, token) -> Response:
-        link = os.getenv("FRONT_WELCOME_URL") + f"?token={token}&email={self.email}"
+        link = os.getenv("FRONT_URL") + f"/welcome?token={token}&email={self.email}"
         subject = "Reset password"
         text = f"Hi,{self.nickname}. Please click the link to reset your password. {link}"
         html = render_template("reset_password.html", name=self.nickname, link=link)

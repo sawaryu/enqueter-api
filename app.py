@@ -23,9 +23,11 @@ app = Flask(__name__)
 app.config.from_object(config.config[os.getenv('FLASK_ENV', 'develop')])
 db.init_app(app)
 migrate = Migrate(app, db)
+jwt = JWTManager(app)
+CORS(app, resources={r"/api/*": {"origins": f"{os.getenv('FRONT_URL', 'http://localhost:3000')}"}})
 
 # logging
-formatter = logging.Formatter(  # pylint: disable=invalid-name
+formatter = logging.Formatter(
     '%(asctime)s %(levelname)s %(process)d -- %(threadName)s '
     '%(module)s : %(funcName)s {%(pathname)s:%(lineno)d} %(message)s', '%Y-%m-%dT%H:%M:%SZ')
 handler = logging.StreamHandler()
@@ -33,9 +35,6 @@ handler.setFormatter(formatter)
 app.logger.setLevel(logging.INFO)
 app.logger.addHandler(handler)
 app.logger.removeHandler(default_handler)
-
-jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": f"{os.getenv('ORIGINS', 'http://localhost:3000')}"}})
 
 
 # jwt settings
