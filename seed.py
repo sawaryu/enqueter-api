@@ -27,14 +27,16 @@ def seed_execute(stop: bool):
         execute_type = "Only drop." if stop else "All processes"
         app.logger.info(f"Session begin. execute type is '{execute_type}'")
         db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
-        db.session.commit()
-        meta = db.metadata
-        for tbl in reversed(meta.sorted_tables):
-            app.logger.info(f'{tbl} dropped.')
+        db.session.flush()
+        tables = db.session.execute(text("show tables;"))
+        for tbl in tables:
+            # ex: ('user',) > user
+            tbl = str(tbl).replace("('", "").replace("',)", "")
             db.session.execute(text(f'DROP TABLE IF EXISTS {tbl};'))
-            db.session.commit()
+            db.session.flush()
+            app.logger.info(f'{tbl} dropped.')
         if stop:
-            app.logger.info("Drop All models completely and seed processed are stopped.")
+            app.logger.info("Drop All models completely and seed processes had been stopped.")
             return
 
         db.create_all()
@@ -93,13 +95,13 @@ def seed_execute(stop: bool):
                 )
                 db.session.add(question)
                 db.session.flush()
-        db.session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
-        db.session.commit()
         app.logger.info("Successfully created data.")
     except:
         app.logger.error("Something fatal error occurred and start rollback.")
         db.session.rollback()
         raise
     finally:
-        app.logger.info("Session had closed.")
+        db.session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+        db.session.commit()
         db.session.close()
+        app.logger.info("Session had closed.")

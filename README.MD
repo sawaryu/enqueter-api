@@ -87,3 +87,9 @@ app.logger.warning('Warning Message')
 app.logger.error('Error Message')
 app.logger.critical('Critical ')
 ```
+
+## Production error happned
+
+```log
+sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1451, 'Cannot delete or update a parent row: a foreign key constraint fails (`exampledb`.`rate`, CONSTRAINT `rate_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`))')
+```
