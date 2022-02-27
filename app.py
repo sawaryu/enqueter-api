@@ -86,7 +86,6 @@ authorizations = {
 
 api = Api(
     app,
-    doc="/document",
     title='Enqueter API',
     version='1.0',
     license="SAMPLE license",
