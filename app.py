@@ -59,7 +59,7 @@ def check_if_token_revoked(jwt_header, jwt_payload):
 # while maintenance (https://hawksnowlog.blogspot.com/2020/12/flask-maintenance-mode.html)
 @app.before_request
 def check_under_maintenance():
-    if os.getenv("MAINTENANCE") == "true":
+    if os.path.exists("maintenance"):
         return make_response({"message": "Sorry, This service is under maintenance."}, 503)
 
 

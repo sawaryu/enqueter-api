@@ -33,8 +33,6 @@ ARG MAILGUN_DOMAIN_NAME
 ENV MAILGUN_DOMAIN_NAME=${MAILGUN_DOMAIN_NAME}
 ARG FRONT_URL
 ENV FRONT_URL=${FRONT_URL}
-ARG MAINTENANCE
-ENV MAINTENANCE=${MAINTENANCE}
 
 # When executeing db migration, override the entry-CMD in the container definiton.
 CMD ["uwsgi", "--ini", "app.ini"]

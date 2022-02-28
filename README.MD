@@ -16,7 +16,7 @@ $ python3 -m venv [ENV_NAME]
 # Start
 $ . .venv/bin/activate
 # Shutdown
-$ deactivate
+(.venv)$ deactivate
 # Clear
 $ rm -rf ENV_NAME/
 # Reset
@@ -26,13 +26,13 @@ $ python3 -m venv -clear ENV_NAME
 <u>2. pip</u>
 ```bash
 # Install libraries
-$ pip install --upgrade pip
-$ pip install -r requirements.txt
+(.venv)$ pip install --upgrade pip
+(.venv)$ pip install -r requirements.txt
 # Get list of installed libraries
-$ pip list
-$ pip freeze
+(.venv)$ pip list
+(.venv)$ pip freeze
 # Output to requirements.txt
-$ pip freeze > requirements.txt
+(.venv)$ pip freeze > requirements.txt
 ```
 
 ## DB structure
