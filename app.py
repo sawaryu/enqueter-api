@@ -56,22 +56,10 @@ def check_if_token_revoked(jwt_header, jwt_payload):
     return token is not None
 
 
-# while maintenance (https://hawksnowlog.blogspot.com/2020/12/flask-maintenance-mode.html)
-@app.before_request
-def check_under_maintenance():
-    if os.path.exists("maintenance"):
-        return make_response({"message": "Sorry, This service is under maintenance."}, 503)
-
-
-@auth_ns.route('/maintenance')
-class AuthMaintenance(Resource):
-    """Check Maintenance(Very simple method.)"""
-
-    @auth_ns.doc(
-        description='Check maintenance.'
-    )
-    def get(self):
-        return {"message": "This application is working correctly."}, 200
+@app.route('/')
+def get():
+    """For Health Check"""
+    return {"message": "This application is working correctly."}, 200
 
 
 # Flask-rest setting.
@@ -86,6 +74,7 @@ authorizations = {
 
 api = Api(
     app,
+    doc="/document",
     title='Enqueter API',
     version='1.0',
     license="SAMPLE license",
