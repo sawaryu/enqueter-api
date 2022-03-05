@@ -1,10 +1,10 @@
 import logging
 import os
 
-from flask import Flask, make_response
+from flask import Flask
 from flask.logging import default_handler
 from flask_jwt_extended import JWTManager
-from flask_restx import Api, Resource
+from flask_restx import Api
 from flask_cors import CORS
 from flask_migrate import Migrate
 from api.auth.auth import auth_ns
