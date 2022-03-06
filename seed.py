@@ -42,15 +42,15 @@ def seed_execute(stop: bool):
         db.create_all()
         app.logger.info("Done drop and create tables completely. And starting create seed date.")
 
-        """Create users *(range(1, 11) > 1~10)"""
+        """Create users *ex: (range(1, 11) > 1~10)"""
         faker_gen = Faker()
-        for n in range(1, 101):
+        for n in range(1, 51):
             n = str(n)
             username = f'sample{n + n}'
             email = f"sample{n}@sample.com"
             password = 'passpass'
             introduce = faker_gen.company()
-            role = UserRole.admin if n == "1" else UserRole.user
+            role = UserRole.user
 
             user = User(
                 username=username,
@@ -72,6 +72,26 @@ def seed_execute(stop: bool):
                 point=3
             )
             db.session.execute(insert_point)
+
+        """Admin User"""
+        username = 'testuser'
+        email = 'test@test.com'
+        password = 'changeafter'
+        introduce = "Hi, I'm test user."
+        role = UserRole.admin
+        user = User(
+            username=username,
+            email=email,
+            password=password,
+        )
+        user.introduce = introduce
+        user.role = role
+        db.session.add(user)
+        db.session.flush()
+        confirmation = Confirmation(user.id)
+        confirmation.confirmed = True
+        db.session.add(confirmation)
+        db.session.flush()
 
         """Create user relationships"""
         first_user = User.query.filter_by(id=1).first()
