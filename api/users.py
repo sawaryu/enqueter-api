@@ -389,11 +389,11 @@ class UserResponseRanking(Resource):
         }, objects))
 
 
-@user_ns.route('/<user_id>/stats')
-class UserStats(Resource):
+@user_ns.route('/<user_id>/information')
+class UserInformation(Resource):
     @user_ns.doc(
         security='jwt_auth',
-        description='Get the user stats by user_id.',
+        description='Get the user information by user_id.',
         params={'period': {'type': 'str', 'enum': ['week', 'month', 'total']}}
     )
     @jwt_required()
@@ -411,18 +411,24 @@ class UserStats(Resource):
                 point_stats: list = point_stats.get_week
             if response_stats:
                 response_stats: list = response_stats.get_week
+            point_users_count: int = len(PointStats.query.filter(PointStats.week_rank.is_not(None)).all())
+            response_users_count: int = len(ResponseStats.query.filter(ResponseStats.week_rank.is_not(None)).all())
         elif period == "month":
             d = {"days": 30}
             if point_stats:
                 point_stats: list = point_stats.get_month
             if response_stats:
                 response_stats: list = response_stats.get_month
+            point_users_count: int = len(PointStats.query.filter(PointStats.month_rank.is_not(None)).all())
+            response_users_count: int = len(ResponseStats.query.filter(ResponseStats.month_rank.is_not(None)).all())
         else:  # all
             d = {"days": 365 * 100}
             if point_stats:
                 point_stats: list = point_stats.get_total
             if response_stats:
                 response_stats: list = response_stats.get_total
+            point_users_count: int = len(PointStats.query.filter(PointStats.total_rank.is_not(None)).all())
+            response_users_count: int = len(ResponseStats.query.filter(ResponseStats.total_rank.is_not(None)).all())
 
         objects = db.session.query(point.c.point.label("point")) \
             .filter(point.c.user_id == user_id) \
@@ -435,4 +441,5 @@ class UserStats(Resource):
 
         radar_data = [right_count, first_count, wrong_count, even_count]
 
-        return {"radar_data": radar_data, "point_stats": point_stats, "response_stats": response_stats}, 200
+        return {"radar_data": radar_data, "point_stats": point_stats, "response_stats": response_stats,
+                "point_users_count": point_users_count, "response_users_count": response_users_count}, 200
