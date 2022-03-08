@@ -3,6 +3,7 @@ import datetime
 import http
 import os
 import tempfile
+import traceback
 
 import boto3
 from io import BytesIO
@@ -36,55 +37,59 @@ class UploadUserAvatar(Resource):
         if not request.method == 'POST':
             return {"message": "invalid request"}, http.HTTPStatus.BAD_REQUEST
 
-        with tempfile.NamedTemporaryFile() as temp_image_file:
+        try:
+            with tempfile.NamedTemporaryFile() as temp_image_file:
 
-            # only string binary data
-            base64_png = request.form['image']
-            if type(base64_png) is not str:
-                return {"message": "invalid request"}, http.HTTPStatus.BAD_REQUEST
+                # only string binary data
+                base64_png = request.form['image']
+                if type(base64_png) is not str:
+                    return {"message": "invalid request"}, http.HTTPStatus.BAD_REQUEST
 
-            # decode
-            code = base64.b64decode(base64_png.split(',')[1])
+                # decode
+                code = base64.b64decode(base64_png.split(',')[1])
 
-            # if valid image format, "UnidentifiedImageError" occur
-            image = Image.open(BytesIO(code))
+                # if valid image format, "UnidentifiedImageError" occur
+                image = Image.open(BytesIO(code))
 
-            # sizing
-            image = scale_to_width(image=image, width=170)
+                # sizing
+                image = scale_to_width(image=image, width=170)
 
-            # if image is broken, error occur
-            image.verify()
+                # if image is broken, error occur
+                image.verify()
 
-            # save in temp_file
-            image.save(temp_image_file, "PNG")
+                # save in temp_file
+                image.save(temp_image_file, "PNG")
 
-            # seek
-            temp_image_file.seek(0)
+                # seek
+                temp_image_file.seek(0)
 
-            now = datetime.datetime.now()
-            filename = now.strftime('%Y%m%d_%H%M%S_%f') + str(current_user.id) + ".png"
-            stream = temp_image_file
+                now = datetime.datetime.now()
+                filename = now.strftime('%Y%m%d_%H%M%S_%f') + str(current_user.id) + ".png"
+                stream = temp_image_file
 
-            # upload
-            client.upload_fileobj(
-                Fileobj=stream,
-                Bucket=os.getenv("AWS_BUCKET_NAME"),
-                Key=f'{os.getenv("AWS_PATH_KEY")}{filename}',
-                ExtraArgs={"ACL": "public-read", "ContentType": "image/png"}
-            )
-
-            # delete if avatar name not! include "egg"
-            if "egg" not in current_user.avatar:
-                client.delete_object(
+                # upload
+                client.upload_fileobj(
+                    Fileobj=stream,
                     Bucket=os.getenv("AWS_BUCKET_NAME"),
-                    Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
+                    Key=f'{os.getenv("AWS_PATH_KEY")}{filename}',
+                    ExtraArgs={"ACL": "public-read", "ContentType": "image/png"}
                 )
 
-            # save
-            current_user.avatar = filename
-            db.session.commit()
+                # delete if avatar name not! include "egg"
+                if "egg" not in current_user.avatar:
+                    client.delete_object(
+                        Bucket=os.getenv("AWS_BUCKET_NAME"),
+                        Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
+                    )
 
-        return {"message": "success"}, 201
+                # save
+                current_user.avatar = filename
+                db.session.commit()
+
+            return {"message": "success"}, 201
+        except:
+            traceback.print_exc()
+            return {"message": "Internal server error. Failed to upload the avatar."}, 500
 
 
 # Sustain aspect ratio.

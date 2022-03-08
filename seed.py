@@ -42,7 +42,30 @@ def seed_execute(stop: bool):
         db.create_all()
         app.logger.info("Done drop and create tables completely. And starting create seed date.")
 
-        """Create users *ex: (range(1, 11) > 1~10)"""
+        """Test Users"""
+        test_users: list[User] = []
+        for n in range(1, 6):
+            username = f'testuser{n}'
+            email = f'test{n}@test.com'
+            password = 'changeafter'
+            introduce = "Hi, I'm test user."
+            role = UserRole.admin
+            user = User(
+                username=username,
+                email=email,
+                password=password,
+            )
+            user.introduce = introduce
+            user.role = role
+            db.session.add(user)
+            db.session.flush()
+            confirmation = Confirmation(user.id)
+            confirmation.confirmed = True
+            db.session.add(confirmation)
+            db.session.flush()
+            test_users.append(user)
+
+        """Sample users *ex: (range(1, 11) > 1~10)"""
         faker_gen = Faker()
         for n in range(1, 31):
             n = str(n)
@@ -73,36 +96,13 @@ def seed_execute(stop: bool):
             )
             db.session.execute(insert_point)
 
-        """Admin User"""
-        username = 'testuser'
-        email = 'test@test.com'
-        password = 'changeafter'
-        introduce = "Hi, I'm test user."
-        role = UserRole.admin
-        user = User(
-            username=username,
-            email=email,
-            password=password,
-        )
-        user.introduce = introduce
-        user.role = role
-        db.session.add(user)
-        db.session.flush()
-        confirmation = Confirmation(user.id)
-        confirmation.confirmed = True
-        db.session.add(confirmation)
-        db.session.flush()
-
         """Create user relationships"""
-        first_user = User.find_by_id(1)
-        test_user = User.find_by_email("test@test.com")
-        target_users = User.query.all()
-        for target_user in target_users:
-            first_user.follow(target_user)
-            test_user.follow(target_user)
-            target_user.follow(first_user)
-            target_user.follow(test_user)
-            db.session.flush()
+        all_users = User.query.all()
+        for normal_user in all_users:
+            for test_user in test_users:
+                test_user.follow(normal_user)
+                normal_user.follow(test_user)
+                db.session.flush()
 
         """Create questions"""
         for (index, q) in enumerate(question_samples):
@@ -136,6 +136,8 @@ question_samples: list[object] = [
     {"content": "生まれ変わるなら？", "option_first": "女性", "option_second": "男性"},
     {"content": "洋画をみるとき", "option_first": "字幕", "option_second": "吹替"},
     {"content": "眠いときはどっちを飲む？", "option_first": "レッドブル", "option_second": "モンスターエナジー"},
+    {"content": "どっち派？", "option_first": "明日花キララ", "option_second": "三上悠亜"},
+    {"content": "どっち派？", "option_first": "欅坂", "option_second": "乃木坂"},
     {"content": "値段は関係なくうまいのは？", "option_first": "マック", "option_second": "モスバーガー"},
     {"content": "Nike vs Adidas", "option_first": "Nike", "option_second": "Adidas"},
     {"content": "寝る前スマホをみる？", "option_first": "yes", "option_second": "no"},
@@ -145,6 +147,4 @@ question_samples: list[object] = [
     {"content": "How are you?", "option_first": "Good!", "option_second": "I’m sick"},
     {"content": "野球？サッカー？", "option_first": "野球", "option_second": "サッカー"},
     {"content": "ペプシとコーラ美味しいのは？", "option_first": "ペプシ", "option_second": "コーラ"},
-    {"content": "どっち派？", "option_first": "明日花キララ", "option_second": "三上悠亜"},
-    {"content": "どっち派？", "option_first": "欅坂", "option_second": "乃木坂"},
 ]
