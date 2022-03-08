@@ -35,6 +35,16 @@ $ python3 -m venv -clear ENV_NAME
 (.venv)$ pip freeze > requirements.txt
 ```
 
+<u>4. Migration</u>
+```bash
+# Create files for migration
+(.venv)$ flask db init
+# Fill the difference between Current status and Models in code. Add alembic_version table.
+(.venv)$ flask db migrate -m "initial"
+# Execute migration
+(.venv)$ flask db upgrade
+```
+
 <u>3. Start app</u>
 ```bash
 (.venv)$ python app.py

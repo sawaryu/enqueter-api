@@ -1,7 +1,4 @@
-import click
 from faker import Faker
-from sqlalchemy import text
-
 from api.model.aggregate import point
 from api.model.confirmation import Confirmation
 from api.model.enum.enums import UserRole
@@ -13,34 +10,15 @@ from database import db
 """
 # * How to execute *
 $ export FLASK_APP=seed.py
-$ flask seed_execute --stop
-        or
-$ flask seed_execute --no-stop 
+$ flask seed_execute
 """
 
 
 @app.cli.command('seed_execute')
-@click.option('--stop/--no-stop', default=False)
-def seed_execute(stop: bool):
+def seed_execute() -> None:
+    """Insert seed data."""
     try:
-        """reset the database"""
-        execute_type = "Only drop." if stop else "All processes"
-        app.logger.info(f"Session begin. execute type is '{execute_type}'")
-        db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
-        db.session.flush()
-        tables = db.session.execute(text("show tables;"))
-        for tbl in tables:
-            # ex: ('user',) > user
-            tbl = str(tbl).replace("('", "").replace("',)", "")
-            db.session.execute(text(f'DROP TABLE IF EXISTS {tbl};'))
-            db.session.flush()
-            app.logger.info(f'{tbl} dropped.')
-        if stop:
-            app.logger.info("Drop All models completely and seed processes had been stopped.")
-            return
-
-        db.create_all()
-        app.logger.info("Done drop and create tables completely. And starting create seed date.")
+        app.logger.info("---START---")
 
         """Test Users"""
         test_users: list[User] = []
@@ -114,16 +92,15 @@ def seed_execute(stop: bool):
             )
             db.session.add(question)
             db.session.flush()
+        db.session.commit()
         app.logger.info("Successfully created data.")
     except:
         app.logger.error("Something fatal error occurred and start rollback.")
         db.session.rollback()
         raise
     finally:
-        db.session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
-        db.session.commit()
         db.session.close()
-        app.logger.info("Session had closed.")
+        app.logger.info("---END---")
 
 
 question_samples: list[object] = [

@@ -1,6 +1,4 @@
 from datetime import timedelta, datetime
-
-import click
 from sqlalchemy import func
 from api.model.aggregate import point, response
 from api.model.user import User, PointStats, ResponseStats
@@ -15,38 +13,36 @@ $ flask batch_execute "Batch job starting..."
 
 
 @app.cli.command('batch_execute')
-@click.argument('message')
-def batch_execute(message: str = "default") -> None:
-    app.logger.info(f"--- START message:{message} ---")
-    db.session.begin()
+def batch_execute() -> None:
+    """Aggregate ranking data."""
     try:
+        app.logger.info("---START---")
+        db.session.begin()
         step_0()
         step_1()
         step_2()
         db.session.commit()
-        app.logger.info("Successfully finished all steps.")
+        app.logger.info("Finished all steps successfully.")
     except:
+        app.logger.error("Something fatal error occurred and start rollback.")
         db.session.rollback()
-        app.logger.error("Something fatal error happened. take rollback completely.")
         raise
     finally:
         db.session.close()
-        app.logger.info("--- END ---")
+        app.logger.info("---END---")
 
 
 def step_0() -> None:
-    """Delete non active users"""
-    app.logger.info("--- step_0 start ---")
+    """Delete non active users."""
+    app.logger.info("---Start step0---")
     User.query.filter_by(is_deleted=True).delete()
     db.session.flush()
-    app.logger.info("--- step_0 end ---")
+    app.logger.info("---End step0---")
 
 
 def step_1() -> None:
-    """
-    Firstly Aggregate data.
-    """
-    app.logger.info("--- step_1 start ---")
+    """Firstly Aggregate data."""
+    app.logger.info("---Start step1---")
     results: list[dict] = []
     for (loop, period) in enumerate([{"days": 365 * 100}, {"days": 30}, {"days": 7}]):
         """Point"""
@@ -90,9 +86,7 @@ def step_1() -> None:
                         break
     app.logger.info("Successfully collected data.")
 
-    """
-    Finally, Update or Create records
-    """
+    """Finally, Update or Create records."""
     for r in results:
         stats = PointStats.find_by_user_id(r["user_id"])
         # update
@@ -109,14 +103,12 @@ def step_1() -> None:
             db.session.add(stats)
         db.session.flush()
     app.logger.info("Successfully create and update data.")
-    app.logger.info("--- step_1 end ---")
+    app.logger.info("---End step1---")
 
 
 def step_2() -> None:
-    """
-    Firstly Aggregate data.
-    """
-    app.logger.info("--- step_2 start ---")
+    """Firstly Aggregate data."""
+    app.logger.info("---Start step2---")
     results: list[dict] = []
     for (loop, period) in enumerate([{"days": 365 * 100}, {"days": 30}, {"days": 7}]):
         """response & Answer count"""
@@ -160,9 +152,7 @@ def step_2() -> None:
                         break
     app.logger.info("Successfully collected data.")
 
-    """
-    Finally, Update or Create records
-    """
+    """Finally, Update or Create records."""
     for r in results:
         stats = ResponseStats.find_by_user_id(r["user_id"])
         # update
@@ -179,4 +169,4 @@ def step_2() -> None:
             db.session.add(stats)
         db.session.flush()
     app.logger.info("Successfully create and update data.")
-    app.logger.info("--- step_2 end ---")
+    app.logger.info("---End step2---")

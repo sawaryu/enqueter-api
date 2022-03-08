@@ -1,4 +1,4 @@
 #!/bin/bash
 
-export FLASK_APP=seed.py
-flask seed_execute --stop
+export FLASK_APP=drop.py
+flask drop_execute
