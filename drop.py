@@ -14,7 +14,7 @@ $ flask drop_execute
 
 @app.cli.command('drop_execute')
 def seed_execute():
-    """Drop all tables and migration files."""
+    """Drop all tables."""
     try:
         app.logger.info("---START---")
         db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
@@ -26,10 +26,7 @@ def seed_execute():
             db.session.execute(text(f'DROP TABLE IF EXISTS {tbl};'))
             db.session.flush()
             app.logger.info(f'{tbl} dropped.')
-        dir_path = "./migrations"
-        if os.path.exists(dir_path):
-            shutil.rmtree(dir_path)
-        app.logger.info("Drop All tables and migration files completely.")
+        app.logger.info("Drop All tables completely.")
     except:
         app.logger.error("Something fatal error occurred and start rollback.")
         db.session.rollback()

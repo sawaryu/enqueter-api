@@ -1,15 +1,19 @@
 # Enqueter API
 
 ## Overview
+
 API for Enqueter project.
 
 `Development environment`
+
 * MacOS (Bigsur)
 * InteliJ IDEA (python community edition)
 * python3.9.6 (flask)
 
 ## Setup
+
 <u>1. venv</u>
+
 ```bash
 # Create
 $ python3 -m venv [ENV_NAME]
@@ -24,6 +28,7 @@ $ python3 -m venv -clear ENV_NAME
 ```
 
 <u>2. pip</u>
+
 ```bash
 # Install libraries
 (.venv)$ pip install --upgrade pip
@@ -35,17 +40,34 @@ $ python3 -m venv -clear ENV_NAME
 (.venv)$ pip freeze > requirements.txt
 ```
 
-<u>4. Migration</u>
+<u>3. Migration</u>
+
+`Initial`
+
 ```bash
 # Create files for migration
 (.venv)$ flask db init
 # Fill the difference between Current status and Models in code. Add alembic_version table.
+# (* At this point, you should deploy this modification.)
 (.venv)$ flask db migrate -m "initial"
 # Execute migration
+# (* You should also do this operation in production env) 
 (.venv)$ flask db upgrade
 ```
 
-<u>3. Start app</u>
+`Thereafter`
+
+```bash
+# Add file to `migrations`dir
+# (* At this point, you should deploy this modification.)
+(.venv)$ flask db migrate -m "sample"
+# Reflect modification to DB 
+# (* You should also do this operation in production env) 
+(.venv)$ flask db upgrade
+```
+
+<u>4. Start app</u>
+
 ```bash
 (.venv)$ python app.py
 ```
