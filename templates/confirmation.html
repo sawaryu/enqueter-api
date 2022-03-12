@@ -321,7 +321,11 @@
               <tr>
                 <td class="em_grey" align="center" valign="top"
                     style="font-size: 16px; line-height: 26px; color:#434343;">
-                  * This link expired within 30 minutes after mailed.
+                  {% if update_email %}
+                  <span>* This code expired within 30 minutes after mailed.</span>
+                  {% else %}
+                  <span>* This link expired within 30 minutes after mailed.</span>
+                  {% endif %}
                 </td>
               </tr>
               <tr>

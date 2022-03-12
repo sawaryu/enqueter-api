@@ -1,5 +1,4 @@
 from datetime import timedelta, datetime
-from time import time
 
 from flask import request
 
@@ -104,7 +103,7 @@ class QuestionIndex(Resource):
         question_id: int = request.json['question_id']
         question: Question = Question.query.filter_by(id=question_id).first()
         if not question or not question.user_id == current_user.id:
-            return {"status": 401, "message": "Unauthorized"}, 401
+            return {"status": 401, "message": "Unauthorized operation."}, 401
 
         # delete notification
         Notification.query.filter_by(question_id=question_id).delete()
