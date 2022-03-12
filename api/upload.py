@@ -17,13 +17,6 @@ from database import db
 
 upload_ns = Namespace('/upload', description="masked(can`t open)")
 
-client = boto3.client(
-    "s3",
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "sample"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "sample"),
-    region_name=os.getenv("AWS_REGION", "sample"),
-)
-
 
 @upload_ns.route('')
 class UploadUserAvatar(Resource):
@@ -39,6 +32,7 @@ class UploadUserAvatar(Resource):
 
         try:
             with tempfile.NamedTemporaryFile() as temp_image_file:
+                client = boto3.client("s3")
 
                 # only string binary data
                 base64_png = request.form['image']

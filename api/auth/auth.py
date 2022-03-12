@@ -4,6 +4,7 @@ import traceback
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import boto3
 from flask import request, jsonify
 from flask_jwt_extended import (
     create_access_token,
@@ -18,7 +19,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from api.model.confirmation import Confirmation, UpdateEmail
 from api.model.others import TokenBlocklist
 from api.model.user import User
-from api.upload import client
 from api.libs.mailgun import MailGunException
 from database import db
 
@@ -131,12 +131,16 @@ class AuthBasic(Resource):
     @jwt_required()
     def delete(self):
 
-        # delete the avatar from aws s3
-        if "egg" not in current_user.avatar:
-            client.delete_object(
-                Bucket=os.getenv("AWS_BUCKET_NAME"),
-                Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
-            )
+        try:
+            client = boto3.client("s3")
+            # delete the avatar from aws s3
+            if "egg" not in current_user.avatar:
+                client.delete_object(
+                    Bucket=os.getenv("AWS_BUCKET_NAME"),
+                    Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
+                )
+        except:
+            return {"message": "Internal server error. Failed to delete the user."}, 500
 
         # change True the current_user deleted flag, and revoke jwt.
         current_user.is_deleted = True

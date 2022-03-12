@@ -33,7 +33,11 @@ class DevelopConfig(BasicConfig):
 
 class ProductionConfig(BasicConfig):
     ENV = 'production'
-    DEBUG = False
+
+    # Errors pass through application error handler
+    # If "DEBUG = True", this is "True"
+    PROPAGATE_EXCEPTIONS = True
+
     APP_HOST = '0.0.0.0'
     APP_PORT = 80
 
