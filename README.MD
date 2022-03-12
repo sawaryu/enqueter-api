@@ -48,7 +48,7 @@ $ python3 -m venv -clear ENV_NAME
 ```bash
 # Create files for migration
 (.venv)$ flask db init
-# Fill the difference between Current status and Models in code. Add alembic_version table.
+# Fill the difference between Current status and Models in code.
 # (* At this point, you should deploy this modification.)
 (.venv)$ flask db migrate -m "initial"
 # Execute migration
