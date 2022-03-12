@@ -8,7 +8,8 @@ API for Enqueter project.
 
 * MacOS (Bigsur)
 * InteliJ IDEA (python community edition)
-* python3.9.6 (flask)
+* python(3.9.6)
+* flask(2.0.2)
 
 ## Setup
 

@@ -1,38 +1,48 @@
-FROM python:3.9.6
+FROM python:3.9.6-buster as builder
+
+WORKDIR /app
 
 COPY ./requirements.txt /app/requirements.txt
-WORKDIR /app
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip \
+  && pip install -r requirements.txt
 
-# Timezone
-ENV TZ="Asia/Tokyo"
+FROM python:3.9.6-slim-buster as runner
 
-# The filename executing application
-ENV FLASK_APP=app
+COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=builder /usr/local/bin/uwsgi /usr/local/bin/uwsgi
+COPY --from=builder /usr/local/bin/flask /usr/local/bin/flask
 
-# Important description
+RUN apt update \
+  && apt install -y libpq5 libxml2 \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY . /app
 
-# Importtant variables getting from AWS SSM
-ENV FLASK_ENV="production"
-ENV AWS_REGION="ap-northeast-1"
-ENV AWS_BUCKET_NAME="mainmybucket"
-ENV AWS_PATH_KEY="avatar/"
 ARG SECRET_KEY
-ENV SECRET_KEY=${SECRET_KEY}
 ARG AWS_ACCESS_KEY_ID
-ENV AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 ARG AWS_SECRET_ACCESS_KEY
-ENV AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+ARG AWS_PATH_KEY
+ARG AWS_REGION
+ARG AWS_BUCKET_NAME
 ARG SQLALCHEMY_DATABASE_URI
-ENV SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
 ARG MAILGUN_API_KEY
-ENV MAILGUN_API_KEY=${MAILGUN_API_KEY}
 ARG MAILGUN_DOMAIN_NAME
-ENV MAILGUN_DOMAIN_NAME=${MAILGUN_DOMAIN_NAME}
 ARG FRONT_URL
+
+ENV SECRET_KEY=${SECRET_KEY}
+ENV AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+ENV AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+ENV AWS_PATH_KEY=${AWS_PATH_KEY}
+ENV AWS_REGION=${AWS_REGION}
+ENV AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
+ENV SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
+ENV MAILGUN_API_KEY=${MAILGUN_API_KEY}
+ENV MAILGUN_DOMAIN_NAME=${MAILGUN_DOMAIN_NAME}
 ENV FRONT_URL=${FRONT_URL}
 
-# When executeing db migration, override the entry-CMD in the container definiton.
+ENV TZ="Asia/Tokyo"
+ENV FLASK_ENV="production"
+
+WORKDIR /app
 CMD ["uwsgi", "--ini", "app.ini"]
