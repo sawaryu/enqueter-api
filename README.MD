@@ -4,13 +4,6 @@
 
 API for Enqueter project.
 
-`Development environment`
-
-* MacOS (Bigsur)
-* InteliJ IDEA (python community edition)
-* python(3.9.6)
-* flask(2.0.2)
-
 ## Setup
 
 <u>1. venv</u>
