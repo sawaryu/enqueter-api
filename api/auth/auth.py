@@ -267,18 +267,17 @@ class AuthConfirmation(Resource):
     def get(self, confirmation_id: str):
         confirmation = Confirmation.find_by_id(confirmation_id)
         if not confirmation:
-            return {"message": "Not Found the resource you want."}, 404
+            return {"message": "illegal"}, 401
         if confirmation.confirmed:
-            return {"message": "You are already confirmed.", "type": "info"}, 200
+            return {"message": "already"}, 401
         if confirmation.is_expired:
-            return {"message": "That link is expired. If you need to resend E-mail, please login firstly.",
-                    "type": "warning"}, 200
+            return {"message": "expired"}, 401
 
         confirmation.confirmed = True
         db.session.commit()
 
         # redirect to Frontend page.
-        return {"message": "You are confirmed now. please login. ", "type": "success"}, 200
+        return {"message": "You are confirmed now."}, 200
 
 
 @auth_ns.route('/<int:user_id>/confirm/resend')
@@ -352,14 +351,14 @@ class AuthUpdateEmail(Resource):
 
         update_email = UpdateEmail.find_by_user_id_and_code(current_user.id, code)
         if not update_email:
-            return {"message": "The code is incorrect."}, 400
+            return {"message": "The code is incorrect."}, 401
         if update_email.is_expired:
             return {"message": "That code is expired already. please start over.",
-                    "type": "danger"}, 400
+                    "type": "danger"}, 401
 
         # if the email is used while process of updating.
         if User.find_by_email(update_email.email):
-            return {"message": "Sorry, E-mail is already used by someone."}, 400
+            return {"message": "Sorry, E-mail is already used by someone. please start over."}, 401
 
         current_user.email = update_email.email
         update_email.force_to_expire()  # important
@@ -393,7 +392,7 @@ class AuthPasswordReset(Resource):
             return {"message": "Internal server error. Failed to resend the email."}, 500
 
     @auth_ns.doc(
-        description='Check the link is valid. (* very important.)',
+        description='Check the link is valid and open reset page. (* very important.)',
         params={'token': {'type': 'str', 'required': True}, 'email': {'type': 'str', 'required': True}}
     )
     def get(self):
@@ -401,11 +400,11 @@ class AuthPasswordReset(Resource):
         email = request.args.get("email").replace("%40", "@")
         user = User.find_by_email(email)
         if not user or not check_password_hash(user.reset_digest, token):
-            return {"message": "Invalid operation."}, 404
+            return {"message": "illegal"}, 401
         elif user.is_reset_expired:
-            return {"message": "expired"}, 200
+            return {"message": "expired"}, 401
 
-        return {"message": "ok", "user_id": user.id}, 200
+        return {"message": "ok"}, 200
 
     @auth_ns.doc(
         description='Actually update password.',
@@ -417,9 +416,9 @@ class AuthPasswordReset(Resource):
         password = request.json["password"]
         user = User.find_by_email(email)
         if not user or not check_password_hash(user.reset_digest, token):
-            return {"message": "Invalid operation."}, 404
+            return {"message": "illegal"}, 401
         elif user.is_reset_expired:
-            return {"message": "expired"}, 202
+            return {"message": "expired"}, 401
 
         user.password = generate_password_hash(password, method='sha256')
         db.session.commit()

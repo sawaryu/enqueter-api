@@ -23,8 +23,8 @@ def seed_execute() -> None:
         """Test Users"""
         test_users: list[User] = []
         for n in range(1, 6):
-            username = f'testuser{n}'
-            email = f'test{n}@test.com'
+            username = f'test{n}'
+            email = f'test{n}@example.com'
             password = 'changeafter'
             introduce = "Hi, I'm test user."
             role = UserRole.admin
@@ -48,7 +48,7 @@ def seed_execute() -> None:
         for n in range(1, 31):
             n = str(n)
             username = f'sample{n + n}'
-            email = f"sample{n}@sample.com"
+            email = f"sample{n}@example.com"
             password = 'passpass'
             introduce = faker_gen.company()
             role = UserRole.user

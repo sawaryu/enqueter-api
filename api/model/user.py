@@ -52,6 +52,7 @@ class User(db.Model):
         self.password = generate_password_hash(password, method='sha256')
         self.nickname = username
         self.nickname_replaced = username.replace(' ', '').replace('　', '')
+        # * Default avatar (ex: "egg_1.png")
         self.avatar = f"egg_{randrange(1, 11)}.png"
 
     def to_dict(self) -> dict:

@@ -4,6 +4,7 @@ import http
 import os
 import tempfile
 import traceback
+from random import randrange
 
 import boto3
 from io import BytesIO
@@ -84,6 +85,28 @@ class UploadUserAvatar(Resource):
         except:
             traceback.print_exc()
             return {"message": "Internal server error. Failed to upload the avatar."}, 500
+
+    @upload_ns.hide
+    @upload_ns.doc(
+        security='jwt_auth',
+        description='Reset the avatar at random and delete from s3'
+    )
+    @jwt_required()
+    def put(self):
+        try:
+            if "egg" not in current_user.avatar:
+                client = boto3.client("s3")
+                client.delete_object(
+                    Bucket=os.getenv("AWS_BUCKET_NAME"),
+                    Key=f'{os.getenv("AWS_PATH_KEY")}{current_user.avatar}'
+                )
+            avatar: str = f"egg_{randrange(1, 11)}.png"
+            current_user.avatar = avatar
+            db.session.commit()
+            return {"message": "ok"}, 200
+        except:
+            traceback.print_exc()
+            return {"message": "Internal server error. Failed to reset the avatar."}, 500
 
 
 # Sustain aspect ratio.
