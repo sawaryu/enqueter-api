@@ -16,7 +16,7 @@ from flask_restx import Namespace, Resource
 
 from database import db
 
-upload_ns = Namespace('/upload', description="masked(can`t open)")
+upload_ns = Namespace('/upload', description="* Masked(can`t open)")
 
 
 @upload_ns.route('')

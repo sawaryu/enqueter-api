@@ -1,4 +1,6 @@
 from faker import Faker
+from sqlalchemy import text
+
 from api.model.aggregate import point
 from api.model.confirmation import Confirmation
 from api.model.enum.enums import UserRole
@@ -16,18 +18,26 @@ $ flask seed_execute
 
 @app.cli.command('seed_execute')
 def seed_execute() -> None:
-    """Insert seed data."""
+    """Truncate and Insert seed data."""
     try:
         app.logger.info("---START---")
+        db.session.begin()
+        db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+        db.session.flush()
+        meta = db.metadata
+        for tbl in reversed(meta.sorted_tables):
+            db.session.execute(text(f'TRUNCATE TABLE {tbl}'))
+            app.logger.info(f'{tbl} truncated.')
+            db.session.flush()
 
-        """Test Users"""
+        """Test Users  *ex: (range(1, 6) > 1~5)"""
         test_users: list[User] = []
         for n in range(1, 6):
             username = f'test{n}'
             email = f'test{n}@example.com'
-            password = 'changeafter'
+            password = 'testpassword'
             introduce = "Hi, I'm test user."
-            role = UserRole.admin
+            role = UserRole.user
             user = User(
                 username=username,
                 email=email,
@@ -43,13 +53,13 @@ def seed_execute() -> None:
             db.session.flush()
             test_users.append(user)
 
-        """Sample users *ex: (range(1, 11) > 1~10)"""
+        """Sample users"""
         faker_gen = Faker()
         for n in range(1, 31):
             n = str(n)
             username = f'sample{n + n}'
             email = f"sample{n}@example.com"
-            password = 'passpass'
+            password = 'samplepassword'
             introduce = faker_gen.company()
             role = UserRole.user
 
@@ -73,6 +83,27 @@ def seed_execute() -> None:
                 point=3
             )
             db.session.execute(insert_point)
+
+        """Admin user"""
+        username = 'jack'
+        email = "jack@example.com"
+        password = 'changeafter'
+        introduce = 'Hi, my name is jack'
+        role = UserRole.admin
+
+        user = User(
+            username=username,
+            email=email,
+            password=password,
+        )
+        user.introduce = introduce
+        user.role = role
+        db.session.add(user)
+        db.session.flush()
+        confirmation = Confirmation(user.id)
+        confirmation.confirmed = True
+        db.session.add(confirmation)
+        db.session.flush()
 
         """Create user relationships"""
         all_users = User.query.all()
@@ -99,6 +130,8 @@ def seed_execute() -> None:
         db.session.rollback()
         raise
     finally:
+        db.session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+        db.session.commit()
         db.session.close()
         app.logger.info("---END---")
 
@@ -113,7 +146,7 @@ question_samples: list[object] = [
     {"content": "生まれ変わるなら？", "option_first": "女性", "option_second": "男性"},
     {"content": "洋画をみるとき", "option_first": "字幕", "option_second": "吹替"},
     {"content": "眠いときはどっちを飲む？", "option_first": "レッドブル", "option_second": "モンスターエナジー"},
-    {"content": "どっち派？", "option_first": "明日花キララ", "option_second": "三上悠亜"},
+    {"content": "どっち派？", "option_first": "夏", "option_second": "冬"},
     {"content": "どっち派？", "option_first": "欅坂", "option_second": "乃木坂"},
     {"content": "値段は関係なくうまいのは？", "option_first": "マック", "option_second": "モスバーガー"},
     {"content": "Nike vs Adidas", "option_first": "Nike", "option_second": "Adidas"},
@@ -124,4 +157,9 @@ question_samples: list[object] = [
     {"content": "How are you?", "option_first": "Good!", "option_second": "I’m sick"},
     {"content": "野球？サッカー？", "option_first": "野球", "option_second": "サッカー"},
     {"content": "ペプシとコーラ美味しいのは？", "option_first": "ペプシ", "option_second": "コーラ"},
+    {"content": "バスケ漫画といえば？", "option_first": "スラムダンク", "option_second": "黒子のバスケ"},
+    {"content": "メッシ、クリロナどっちが最高のプレイヤー？", "option_first": "メッシ", "option_second": "クリロナ"},
+    {"content": "朝と夜どっちが好き？", "option_first": "朝", "option_second": "夜"},
+    {"content": "レジ袋派、エコバック派", "option_first": "レジ袋", "option_second": "エコバック"},
+    {"content": "好きな牛丼チェーン", "option_first": "松屋", "option_second": "吉野家"},
 ]

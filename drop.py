@@ -1,6 +1,3 @@
-import os
-import shutil
-
 from sqlalchemy import text
 from app import app
 from database import db
@@ -17,6 +14,7 @@ def seed_execute():
     """Drop all tables."""
     try:
         app.logger.info("---START---")
+        db.session.begin()
         db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
         db.session.flush()
         tables = db.session.execute(text("show tables;"))

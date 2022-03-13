@@ -22,7 +22,7 @@ from api.model.user import User
 from api.libs.mailgun import MailGunException
 from database import db
 
-auth_ns = Namespace('/auth', description="Authentication")
+auth_ns = Namespace('/auth', description="* Authentication")
 
 username_regex = r'\A[a-z\d]{1,15}\Z(?i)'
 email_regex = r"^(?!.*…)[a-zA-Z0-9_+-]+(.[a-zA-Z0-9_+-]+)*@([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.)+[a-zA-Z]{2,}$"
@@ -68,7 +68,7 @@ resetPassword = auth_ns.model('AuthResetPassword', {
 
 @auth_ns.route('')
 class AuthBasic(Resource):
-    """Basic auth CRUD"""
+    """Basic auth CRUD functions"""
 
     @auth_ns.doc(
         description='Create new user.',
