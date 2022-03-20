@@ -56,6 +56,7 @@ class Question(db.Model):
             "option_second": self.option_second,
             "created_at": str(self.created_at),
             "is_answered": self.is_answered,
+            "answered_count": len(self.answered_users.all()),
             "is_bookmarked": self.is_bookmarked
         }
 
@@ -86,3 +87,4 @@ class Question(db.Model):
             return True
         else:
             return False
+
