@@ -344,6 +344,8 @@ class UserPointRanking(Resource):
 
         objects = db.session.query(select_query[0].label("rank"), select_query[1].label("point"), User) \
             .join(User, User.id == PointStats.user_id) \
+            .filter(select_query[0].is_not(None)) \
+            .filter(select_query[1].is_not(None)) \
             .order_by(sub_query) \
             .order_by(User.id.desc()) \
             .limit(30) \
@@ -378,6 +380,8 @@ class UserResponseRanking(Resource):
 
         objects = db.session.query(select_query[0].label("rank"), select_query[1].label("response"), User) \
             .join(User, User.id == ResponseStats.user_id) \
+            .filter(select_query[0].is_not(None)) \
+            .filter(select_query[1].is_not(None)) \
             .order_by(sub_query) \
             .order_by(User.id.desc()) \
             .limit(30) \
